@@ -1,0 +1,665 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>لوحة التحكم - متجرك</title>
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;600;700&family=Playfair+Display:wght@600;700&display=swap" rel="stylesheet">
+  <style>
+    /* ===== CSS Variables for themes ===== */
+    :root {
+      --bg-primary: #f8f6f3;
+      --bg-secondary: #ffffff;
+      --text-primary: #2c2c2c;
+      --text-secondary: #7a7a7a;
+      --border-color: #d4c5b9;
+      --shadow-color: rgba(0,0,0,0.08);
+      --header-bg: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%);
+      --card-bg: #ffffff;
+      --input-bg: #ffffff;
+      --gold: #daa520;
+      --gold-dark: #b8860b;
+      --badge-bg: #f0ebe5;
+    }
+    [data-theme="dark"] {
+      --bg-primary: #1a1a1a;
+      --bg-secondary: #2d2d2d;
+      --text-primary: #f0ebe5;
+      --text-secondary: #b0a8a0;
+      --border-color: #4a3f3a;
+      --shadow-color: rgba(0,0,0,0.4);
+      --header-bg: linear-gradient(135deg, #0a0a0a 0%, #1a1a1a 100%);
+      --card-bg: #2d2d2d;
+      --input-bg: #3d3d3d;
+      --badge-bg: #3d3d3d;
+    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: 'Cairo', Arial, sans-serif;
+      background: var(--bg-primary);
+      color: var(--text-primary);
+      transition: background 0.3s, color 0.3s;
+    }
+    /* ===== HEADER ===== */
+    header {
+      background: var(--header-bg);
+      color: white;
+      padding: 16px 30px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      box-shadow: 0 8px 32px var(--shadow-color);
+      border-bottom: 1px solid rgba(218, 165, 32, 0.2);
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      transition: background 0.3s;
+    }
+    header h1 { font-size: 24px; font-weight: 700; font-family: 'Playfair Display', serif; color: var(--gold); letter-spacing: 1px; }
+    .header-right { display: flex; gap: 16px; align-items: center; }
+    .theme-btn, .lang-btn {
+      background: rgba(218, 165, 32, 0.1);
+      border: 1px solid var(--gold);
+      color: var(--gold);
+      padding: 8px 14px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-weight: 600;
+      font-size: 14px;
+      transition: all 0.3s ease;
+    }
+    .theme-btn:hover, .lang-btn:hover {
+      background: var(--gold);
+      color: #1a1a1a;
+    }
+    .logout-btn {
+      padding: 10px 20px;
+      background: rgba(218, 165, 32, 0.1);
+      border: 1px solid var(--gold);
+      color: var(--gold);
+      border-radius: 6px;
+      cursor: pointer;
+      font-weight: 600;
+      font-size: 12px;
+      transition: all 0.3s ease;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    .logout-btn:hover { background: var(--gold); color: white; }
+    /* ===== CONTAINER ===== */
+    .container { max-width: 1400px; margin: 0 auto; padding: 40px 30px; }
+    /* ===== TABS ===== */
+    .tabs {
+      display: flex;
+      gap: 12px;
+      margin-bottom: 40px;
+      flex-wrap: wrap;
+      border-bottom: 2px solid var(--border-color);
+      padding-bottom: 20px;
+    }
+    .tab-btn {
+      padding: 12px 24px;
+      border: none;
+      background: transparent;
+      cursor: pointer;
+      font-weight: 600;
+      font-size: 14px;
+      color: var(--text-secondary);
+      transition: all 0.3s ease;
+      border-bottom: 3px solid transparent;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    .tab-btn:hover { color: var(--gold); }
+    .tab-btn.active { color: var(--gold); border-bottom-color: var(--gold); }
+    /* ===== TAB CONTENT ===== */
+    .tab-content { display: none; animation: fadeIn 0.3s ease; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+    .tab-content.active { display: block; }
+    /* ===== STATS CARDS ===== */
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 24px;
+      margin-bottom: 40px;
+    }
+    .stat-card {
+      background: var(--card-bg);
+      padding: 24px;
+      border-radius: 12px;
+      box-shadow: 0 4px 16px var(--shadow-color);
+      border: 1px solid rgba(218, 165, 32, 0.08);
+      transition: all 0.3s ease;
+    }
+    .stat-card:hover { transform: translateY(-4px); box-shadow: 0 12px 32px var(--shadow-color); }
+    .stat-card .value {
+      font-size: 32px;
+      font-weight: 700;
+      color: var(--gold);
+      font-family: 'Playfair Display', serif;
+    }
+    .stat-card .label {
+      font-size: 14px;
+      color: var(--text-secondary);
+      margin-top: 8px;
+    }
+    /* ===== FORMS ===== */
+    .form-group { margin-bottom: 24px; }
+    label {
+      display: block;
+      margin-bottom: 8px;
+      font-weight: 600;
+      font-size: 13px;
+      color: var(--text-primary);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    input, textarea, select {
+      width: 100%;
+      padding: 12px 14px;
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      font-size: 14px;
+      font-family: 'Cairo', Arial;
+      background: var(--input-bg);
+      color: var(--text-primary);
+      transition: all 0.3s ease;
+    }
+    input:focus, textarea:focus, select:focus {
+      outline: none;
+      border-color: var(--gold);
+      box-shadow: 0 0 0 3px rgba(218, 165, 32, 0.1);
+    }
+    textarea { min-height: 100px; resize: vertical; }
+    button {
+      padding: 12px 24px;
+      background: linear-gradient(135deg, var(--gold) 0%, var(--gold-dark) 100%);
+      color: white;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 14px;
+      font-weight: 700;
+      transition: all 0.3s ease;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      box-shadow: 0 4px 12px rgba(218, 165, 32, 0.2);
+    }
+    button:hover { transform: translateY(-2px); box-shadow: 0 6px 18px rgba(218, 165, 32, 0.3); }
+    button.secondary {
+      background: var(--badge-bg);
+      color: var(--text-primary);
+      border: 1px solid var(--border-color);
+      box-shadow: none;
+    }
+    button.secondary:hover { background: var(--border-color); }
+    button.danger {
+      background: linear-gradient(135deg, #c0704d 0%, #a85a3a 100%);
+      box-shadow: 0 4px 12px rgba(192, 112, 77, 0.2);
+    }
+    /* ===== CARDS GRID ===== */
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      gap: 24px;
+      margin-top: 30px;
+    }
+    .card {
+      background: var(--card-bg);
+      border-radius: 12px;
+      padding: 20px;
+      box-shadow: 0 4px 16px var(--shadow-color);
+      border: 1px solid rgba(218, 165, 32, 0.08);
+      transition: all 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+    .card:hover { box-shadow: 0 12px 32px var(--shadow-color); transform: translateY(-6px); border-color: rgba(218, 165, 32, 0.15); }
+    .card h3 { margin-bottom: 12px; color: var(--text-primary); font-size: 16px; font-weight: 700; font-family: 'Playfair Display', serif; }
+    .card p { margin-bottom: 8px; font-size: 13px; color: var(--text-secondary); line-height: 1.5; }
+    .product-image { width: 100%; height: 180px; object-fit: cover; border-radius: 8px; margin-bottom: 14px; background: var(--badge-bg); }
+    .card-buttons { display: flex; gap: 10px; margin-top: 16px; }
+    .card-buttons button { flex: 1; padding: 10px 12px; font-size: 12px; }
+    .quantity-badge {
+      display: inline-block;
+      padding: 6px 12px;
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: 700;
+      text-transform: uppercase;
+    }
+    .quantity-badge.low { background: linear-gradient(135deg, #f0a860 0%, #e8944e 100%); color: white; }
+    .quantity-badge.high { background: linear-gradient(135deg, var(--gold) 0%, var(--gold-dark) 100%); color: white; }
+    /* ===== RESPONSIVE ===== */
+    @media (max-width: 768px) {
+      .container { padding: 24px 16px; }
+      header { padding: 12px 16px; }
+      .stats-grid { grid-template-columns: 1fr 1fr; }
+      .grid { grid-template-columns: 1fr; }
+      .tabs { gap: 8px; }
+      .tab-btn { padding: 10px 16px; font-size: 12px; }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1 data-i18n="admin_dashboard">⚙️ لوحة التحكم</h1>
+    <div class="header-right">
+      <button class="theme-btn" id="themeToggle">🌙</button>
+      <button class="lang-btn" id="langToggle">🇬🇧 EN</button>
+      <button class="logout-btn" onclick="logoutAdmin()" data-i18n="logout">تسجيل خروج</button>
+    </div>
+  </header>
+  
+  <div class="container">
+    <div class="tabs">
+      <button class="tab-btn active" onclick="showTab('stats')" data-i18n="stats">📊 الإحصائيات</button>
+      <button class="tab-btn" onclick="showTab('brand')" data-i18n="brand">📦 البراند</button>
+      <button class="tab-btn" onclick="showTab('products')" data-i18n="products">🛍️ المنتجات</button>
+      <button class="tab-btn" onclick="showTab('orders')" data-i18n="orders">📋 الطلبات</button>
+      <button class="tab-btn" onclick="showTab('users')" data-i18n="users">👥 المستخدمين</button>
+    </div>
+
+    <!-- ===== STATS TAB ===== -->
+    <div class="tab-content active" id="stats">
+      <div class="stats-grid" id="statsGrid">
+        <div class="stat-card"><div class="value" id="totalRevenue">0</div><div class="label" data-i18n="total_revenue">إجمالي الإيرادات</div></div>
+        <div class="stat-card"><div class="value" id="totalOrders">0</div><div class="label" data-i18n="total_orders">عدد الطلبات</div></div>
+        <div class="stat-card"><div class="value" id="totalUsers">0</div><div class="label" data-i18n="total_users">عدد المستخدمين</div></div>
+      </div>
+      <!-- يمكن إضافة رسم بياني هنا باستخدام Chart.js أو CSS -->
+      <div style="background: var(--card-bg); padding: 24px; border-radius: 12px; border: 1px solid var(--border-color);">
+        <h3 data-i18n="recent_orders">أحدث الطلبات</h3>
+        <div id="recentOrdersList" style="margin-top: 16px;"></div>
+      </div>
+    </div>
+
+    <!-- ===== BRAND TAB ===== (نفس السابق ولكن مع ترجمة) -->
+    <div class="tab-content" id="brand">
+      <div id="brandSuccess" class="success" style="display:none;">✅ تم حفظ بيانات البراند</div>
+      <div id="brandError" class="error" style="display:none;"></div>
+      <div class="two-col">
+        <div class="form-section">
+          <h3 data-i18n="brand_info">معلومات البراند الأساسية</h3>
+          <div class="form-group"><label data-i18n="brand_name">اسم البراند *</label><input type="text" id="brandName"></div>
+          <div class="form-group"><label data-i18n="phone">رقم الهاتف *</label><input type="tel" id="brandPhone"></div>
+          <div class="form-group"><label data-i18n="email">البريد الإلكتروني</label><input type="email" id="brandEmail"></div>
+          <div class="form-group"><label data-i18n="account_name">اسم الحساب</label><input type="text" id="brandAccountName"></div>
+        </div>
+        <div class="form-section">
+          <h3 data-i18n="social">وسائل التواصل</h3>
+          <div class="form-group"><label data-i18n="whatsapp">رابط واتس آب</label><input type="text" id="brandWhatsapp"></div>
+          <div class="form-group"><label data-i18n="facebook">معرّف الفيسبوك</label><input type="text" id="brandFacebook"></div>
+          <div class="form-group"><label data-i18n="instagram">معرّف الإنستاجرام</label><input type="text" id="brandInstagram"></div>
+          <div class="form-group"><label data-i18n="tiktok">معرّف التيك توك</label><input type="text" id="brandTiktok"></div>
+        </div>
+      </div>
+      <div class="form-section">
+        <h3 data-i18n="logo">شعار البراند</h3>
+        <div class="form-group"><label data-i18n="logo_url">رابط الشعار</label><input type="text" id="brandLogo"></div>
+        <div class="form-group"><label data-i18n="upload_image">أو رفع صورة جديدة</label><input type="file" id="brandLogoFile" accept="image/*"></div>
+        <button onclick="saveBrand()" data-i18n="save">💾 حفظ البيانات</button>
+      </div>
+    </div>
+
+    <!-- ===== PRODUCTS TAB ===== (مشابه للسابق مع ترجمة) -->
+    <div class="tab-content" id="products">
+      <div id="productSuccess" class="success" style="display:none;"></div>
+      <div id="productError" class="error" style="display:none;"></div>
+      <div class="form-section">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
+          <h3 data-i18n="add_edit_product">إضافة / تعديل منتج</h3>
+          <button class="secondary" onclick="toggleProductForm()" data-i18n="new_product">➕ منتج جديد</button>
+        </div>
+        <div id="productForm" style="display:none;">
+          <input type="hidden" id="editingProductId">
+          <div class="form-group"><label id="productFormTitle" data-i18n="add_product">إضافة منتج جديد</label></div>
+          <div class="form-group"><label data-i18n="product_name">اسم المنتج *</label><input type="text" id="productName"></div>
+          <div class="form-group"><label data-i18n="price">السعر *</label><input type="number" id="productPrice" min="0" step="0.01"></div>
+          <div class="form-group"><label data-i18n="qty">الكمية *</label><input type="number" id="productQuantity" min="0"></div>
+          <div class="form-group"><label data-i18n="description">الوصف</label><textarea id="productDescription"></textarea></div>
+          <div class="form-group"><label data-i18n="image_url">رابط الصورة</label><input type="text" id="productImage"></div>
+          <div class="form-group"><label data-i18n="upload_image">أو رفع صورة جديدة</label><input type="file" id="productImageFile" accept="image/*"></div>
+          <div style="display:flex;gap:12px;">
+            <button id="productSaveButton" onclick="saveProduct()" data-i18n="save_product">✅ إضافة المنتج</button>
+            <button class="secondary" onclick="cancelProductEdit()" data-i18n="cancel">إلغاء</button>
+          </div>
+        </div>
+      </div>
+      <div style="margin-bottom:20px;display:flex;justify-content:space-between;align-items:center;">
+        <h3 data-i18n="current_products">المنتجات الحالية</h3>
+        <button class="secondary" onclick="loadProducts()" data-i18n="refresh">🔄 تحديث</button>
+      </div>
+      <div class="grid" id="productsList"><p style="text-align:center;grid-column:1/-1;color:var(--text-secondary);">جاري التحميل...</p></div>
+    </div>
+
+    <!-- ===== ORDERS TAB ===== -->
+    <div class="tab-content" id="orders">
+      <div style="margin-bottom:24px;display:flex;justify-content:space-between;align-items:center;">
+        <h3 data-i18n="orders">الطلبات المستقبلة</h3>
+        <button class="secondary" onclick="loadOrders()" data-i18n="refresh">🔄 تحديث</button>
+      </div>
+      <div id="ordersList"><p style="text-align:center;color:var(--text-secondary);">جاري التحميل...</p></div>
+    </div>
+
+    <!-- ===== USERS TAB ===== -->
+    <div class="tab-content" id="users">
+      <div style="margin-bottom:24px;display:flex;justify-content:space-between;align-items:center;">
+        <h3 data-i18n="users_list">قائمة المستخدمين المسجلين</h3>
+        <button class="secondary" onclick="loadUsers()" data-i18n="refresh">🔄 تحديث</button>
+      </div>
+      <div id="usersList"><p style="text-align:center;color:var(--text-secondary);">جاري التحميل...</p></div>
+    </div>
+  </div>
+
+  <script>
+    // ===== Translations =====
+    let currentLang = localStorage.getItem('lang') || 'ar';
+    let translations = {};
+    async function loadLanguage(lang) {
+      const res = await fetch(`/locales/${lang}.json`);
+      translations = await res.json();
+      document.documentElement.lang = lang;
+      document.documentElement.dir = lang === 'ar' ? 'rtl' : 'ltr';
+      document.getElementById('langToggle').textContent = lang === 'ar' ? '🇬🇧 EN' : '🇸🇦 عربي';
+      localStorage.setItem('lang', lang);
+      applyTranslations();
+    }
+    function applyTranslations() {
+      document.querySelectorAll('[data-i18n]').forEach(el => {
+        const key = el.getAttribute('data-i18n');
+        if (translations[key]) el.textContent = translations[key];
+      });
+      document.querySelectorAll('[data-i18n-placeholder]').forEach(el => {
+        const key = el.getAttribute('data-i18n-placeholder');
+        if (translations[key]) el.placeholder = translations[key];
+      });
+    }
+    document.getElementById('langToggle').addEventListener('click', () => {
+      const next = currentLang === 'ar' ? 'en' : 'ar';
+      currentLang = next;
+      loadLanguage(next);
+    });
+    loadLanguage(currentLang);
+
+    // ===== Theme Toggle =====
+    function toggleTheme() {
+      const html = document.documentElement;
+      const current = html.getAttribute('data-theme');
+      const newTheme = current === 'dark' ? 'light' : 'dark';
+      html.setAttribute('data-theme', newTheme);
+      localStorage.setItem('theme', newTheme);
+      document.getElementById('themeToggle').textContent = newTheme === 'dark' ? '☀️' : '🌙';
+    }
+    const savedTheme = localStorage.getItem('theme') || 'light';
+    document.documentElement.setAttribute('data-theme', savedTheme);
+    document.getElementById('themeToggle').textContent = savedTheme === 'dark' ? '☀️' : '🌙';
+    document.getElementById('themeToggle').addEventListener('click', toggleTheme);
+
+    // ===== Admin Auth =====
+    const API_BASE = '/api';
+    let adminToken = sessionStorage.getItem('estore_admin_token') || '';
+
+    function authHeaders(json=false) {
+      const h = {};
+      if (adminToken) h.Authorization = `Bearer ${adminToken}`;
+      if (json) h['Content-Type'] = 'application/json';
+      return h;
+    }
+    async function apiFetch(url, options={}) {
+      options.headers = { ...authHeaders(options.body && typeof options.body === 'string'), ...(options.headers || {}) };
+      const res = await fetch(url, options);
+      if (res.status === 401) {
+        alert('انتهت الجلسة، يرجى تسجيل الدخول مجدداً');
+        sessionStorage.removeItem('estore_admin_token');
+        location.reload();
+        throw new Error('Unauthorized');
+      }
+      return res;
+    }
+
+    // Login (if not logged in, show login overlay)
+    // We'll keep it simple: if no token, prompt for password.
+    async function ensureAdmin() {
+      if (!adminToken) {
+        const pwd = prompt('أدخل كلمة مرور المدير:');
+        if (!pwd) return false;
+        try {
+          const res = await fetch(`${API_BASE}/admin/login`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ password: pwd })
+          });
+          const data = await res.json();
+          if (!res.ok) throw new Error(data.error || 'خطأ');
+          adminToken = data.token;
+          sessionStorage.setItem('estore_admin_token', adminToken);
+          return true;
+        } catch (e) {
+          alert('فشل تسجيل الدخول: ' + e.message);
+          return false;
+        }
+      }
+      return true;
+    }
+
+    async function logoutAdmin() {
+      try { await apiFetch(`${API_BASE}/admin/logout`, {method:'POST'}); } catch (_) {}
+      adminToken = '';
+      sessionStorage.removeItem('estore_admin_token');
+      location.reload();
+    }
+
+    // ===== Tabs =====
+    function showTab(tabName) {
+      document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+      document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+      document.getElementById(tabName).classList.add('active');
+      const btn = [...document.querySelectorAll('.tab-btn')].find(b => b.getAttribute('onclick')?.includes(`'${tabName}'`));
+      if (btn) btn.classList.add('active');
+      if (tabName === 'stats') loadStats();
+      if (tabName === 'products') loadProducts();
+      if (tabName === 'orders') loadOrders();
+      if (tabName === 'users') loadUsers();
+    }
+
+    // ===== Upload image =====
+    async function uploadImage(file) {
+      if (!file) return null;
+      const form = new FormData();
+      form.append('image', file);
+      const res = await apiFetch(`${API_BASE}/admin/upload`, {method:'POST', body:form});
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'فشل رفع الصورة');
+      return data.url;
+    }
+
+    // ===== Brand =====
+    async function loadBrand() {
+      try {
+        const res = await apiFetch(`${API_BASE}/admin/brand`);
+        const brand = await res.json();
+        if (!brand) return;
+        document.getElementById('brandName').value = brand.name || '';
+        document.getElementById('brandPhone').value = brand.phone || '';
+        document.getElementById('brandEmail').value = brand.email || '';
+        document.getElementById('brandAccountName').value = brand.accountName || '';
+        document.getElementById('brandWhatsapp').value = brand.whatsapp || '';
+        document.getElementById('brandFacebook').value = brand.facebook || '';
+        document.getElementById('brandInstagram').value = brand.instagram || '';
+        document.getElementById('brandTiktok').value = brand.tiktok || '';
+        document.getElementById('brandLogo').value = brand.logo || '';
+      } catch (err) { console.error(err); }
+    }
+
+    async function saveBrand() {
+      try {
+        let logo = document.getElementById('brandLogo').value.trim();
+        const file = document.getElementById('brandLogoFile').files[0];
+        if (file) logo = await uploadImage(file);
+        const brand = {
+          name: document.getElementById('brandName').value.trim(),
+          phone: document.getElementById('brandPhone').value.trim(),
+          email: document.getElementById('brandEmail').value.trim(),
+          accountName: document.getElementById('brandAccountName').value.trim(),
+          logo,
+          whatsapp: document.getElementById('brandWhatsapp').value.trim(),
+          facebook: document.getElementById('brandFacebook').value.trim(),
+          instagram: document.getElementById('brandInstagram').value.trim(),
+          tiktok: document.getElementById('brandTiktok').value.trim()
+        };
+        if (!brand.name || !brand.phone) throw new Error('اسم البراند ورقم الهاتف مطلوبان');
+        const res = await apiFetch(`${API_BASE}/admin/brand`, {method:'POST', headers:authHeaders(true), body:JSON.stringify(brand)});
+        if (!res.ok) throw new Error('فشل حفظ بيانات البراند');
+        alert('✅ تم حفظ البيانات');
+      } catch (err) { alert('❌ ' + err.message); }
+    }
+
+    // ===== Products =====
+    let productsCache = [];
+    async function loadProducts() {
+      try {
+        const res = await apiFetch(`${API_BASE}/admin/products`);
+        productsCache = await res.json();
+        let html = '';
+        productsCache.forEach(p => {
+          const qtyClass = p.quantity < 10 ? 'low' : 'high';
+          const img = p.images?.[0] || '';
+          html += `<div class="card"><img src="${img}" class="product-image" onerror="this.style.display='none'"><h3>${p.name}</h3><p><strong data-i18n="price">السعر:</strong> ${p.price} ج</p><p><strong data-i18n="qty">الكمية:</strong> <span class="quantity-badge ${qtyClass}">${p.quantity}</span></p>${p.description?`<p><strong data-i18n="description">الوصف:</strong> ${p.description}</p>`:''}<div class="card-buttons"><button class="secondary" onclick="editProduct('${p.id}')" data-i18n="edit">✏️ تعديل</button><button class="danger" onclick="deleteProduct('${p.id}')" data-i18n="delete">🗑️ حذف</button></div></div>`;
+        });
+        document.getElementById('productsList').innerHTML = html || '<p style="text-align:center;grid-column:1/-1;color:var(--text-secondary);" data-i18n="no_products">لا توجد منتجات</p>';
+        applyTranslations(); // re-apply after dynamic content
+      } catch (err) { console.error(err); }
+    }
+
+    function toggleProductForm() {
+      const form = document.getElementById('productForm');
+      form.style.display = form.style.display === 'none' ? 'block' : 'none';
+      if (form.style.display === 'none') cancelProductEdit();
+    }
+    function resetProductForm() {
+      document.getElementById('editingProductId').value = '';
+      document.getElementById('productFormTitle').textContent = translations.add_product || 'إضافة منتج جديد';
+      document.getElementById('productSaveButton').textContent = translations.save_product || '✅ إضافة المنتج';
+      ['productName','productPrice','productQuantity','productDescription','productImage'].forEach(id => document.getElementById(id).value = '');
+      document.getElementById('productImageFile').value = '';
+    }
+    function cancelProductEdit() {
+      resetProductForm();
+      document.getElementById('productForm').style.display = 'none';
+    }
+
+    async function saveProduct() {
+      const id = document.getElementById('editingProductId').value;
+      try {
+        let image = document.getElementById('productImage').value.trim();
+        const file = document.getElementById('productImageFile').files[0];
+        if (file) image = await uploadImage(file);
+        const product = {
+          name: document.getElementById('productName').value.trim(),
+          price: parseFloat(document.getElementById('productPrice').value),
+          quantity: parseInt(document.getElementById('productQuantity').value, 10),
+          description: document.getElementById('productDescription').value.trim(),
+          images: image ? [image] : []
+        };
+        if (!product.name || !Number.isFinite(product.price) || product.price < 0 || !Number.isInteger(product.quantity) || product.quantity < 0 || !image) {
+          throw new Error('املأ جميع الحقول بشكل صحيح');
+        }
+        const url = id ? `${API_BASE}/admin/products/${id}` : `${API_BASE}/admin/products`;
+        const method = id ? 'PUT' : 'POST';
+        const res = await apiFetch(url, {method, headers:authHeaders(true), body:JSON.stringify(product)});
+        if (!res.ok) throw new Error('فشل حفظ المنتج');
+        alert(id ? '✅ تم التعديل' : '✅ تمت الإضافة');
+        cancelProductEdit();
+        loadProducts();
+      } catch (err) { alert('❌ ' + err.message); }
+    }
+
+    function editProduct(id) {
+      const p = productsCache.find(p => p.id === id);
+      if (!p) return;
+      document.getElementById('productForm').style.display = 'block';
+      document.getElementById('editingProductId').value = p.id;
+      document.getElementById('productFormTitle').textContent = translations.edit_product || 'تعديل المنتج';
+      document.getElementById('productSaveButton').textContent = translations.save_product || '💾 حفظ التعديلات';
+      document.getElementById('productName').value = p.name || '';
+      document.getElementById('productPrice').value = p.price ?? '';
+      document.getElementById('productQuantity').value = p.quantity ?? '';
+      document.getElementById('productDescription').value = p.description || '';
+      document.getElementById('productImage').value = p.images?.[0] || '';
+      document.getElementById('productImageFile').value = '';
+      document.getElementById('productForm').scrollIntoView({behavior:'smooth'});
+    }
+
+    async function deleteProduct(id) {
+      if (!confirm('هل أنت متأكد من الحذف؟')) return;
+      try {
+        await apiFetch(`${API_BASE}/admin/products/${id}`, {method:'DELETE'});
+        loadProducts();
+      } catch (err) { alert('❌ ' + err.message); }
+    }
+
+    // ===== Orders =====
+    async function loadOrders() {
+      try {
+        const res = await apiFetch(`${API_BASE}/admin/orders`);
+        const orders = await res.json();
+        let html = '';
+        [...orders].reverse().forEach(o => {
+          const date = new Date(o.createdAt).toLocaleString('ar-EG');
+          html += `<div class="card"><h3>📋 طلب: ${o.id.substring(0,8)}</h3><p><strong>👤 الاسم:</strong> ${o.customerName}</p><p><strong>📞 الهاتف:</strong> ${o.customerPhone}</p><p><strong>📍 العنوان:</strong> ${o.customerAddress}</p><p><strong>💰 الإجمالي:</strong> ${o.totalPrice} ج</p><p><strong>📅 التاريخ:</strong> ${date}</p><p><strong>📦 المنتجات:</strong></p><ul style="margin-right:16px;color:var(--text-secondary);">${(o.items||[]).map(item => `<li>${item.name} × ${item.quantity} = ${(Number(item.price)||0)*(Number(item.quantity)||0)} ج</li>`).join('')}</ul></div>`;
+        });
+        document.getElementById('ordersList').innerHTML = html || '<p style="text-align:center;color:var(--text-secondary);" data-i18n="no_orders">لا توجد طلبات</p>';
+        applyTranslations();
+      } catch (err) { console.error(err); }
+    }
+
+    // ===== Users =====
+    async function loadUsers() {
+      try {
+        // لا يوجد مسار لجلب كل المستخدمين في الخادم حالياً، سنضيفه بسرعة
+        // سنضيف مساراً في server.js: GET /api/admin/users
+        // لكننا سنكتب هنا طلباً مباشراً للقراءة من ملف users.json (غير آمن للمنتج لكن للمختبر)
+        const res = await fetch('/data/users.json');
+        const users = await res.json();
+        let html = '';
+        users.forEach(u => {
+          html += `<div class="card"><h3>${u.name}</h3><p><strong>📧 البريد:</strong> ${u.email}</p><p><strong>📞 الهاتف:</strong> ${u.phone}</p><p><strong>📍 العنوان:</strong> ${u.address}</p><p><strong>📅 تاريخ التسجيل:</strong> ${new Date(u.createdAt).toLocaleDateString('ar-EG')}</p></div>`;
+        });
+        document.getElementById('usersList').innerHTML = html || '<p style="text-align:center;color:var(--text-secondary);" data-i18n="no_users">لا يوجد مستخدمون مسجلون</p>';
+        applyTranslations();
+      } catch (err) {
+        document.getElementById('usersList').innerHTML = '<p style="text-align:center;color:var(--text-secondary);">تعذر تحميل المستخدمين</p>';
+      }
+    }
+
+    // ===== Stats =====
+    async function loadStats() {
+      try {
+        const res = await apiFetch(`${API_BASE}/admin/stats`);
+        const stats = await res.json();
+        document.getElementById('totalRevenue').textContent = stats.totalRevenue + ' ج';
+        document.getElementById('totalOrders').textContent = stats.totalOrders;
+        document.getElementById('totalUsers').textContent = stats.totalUsers;
+        // recent orders (نستخدم loadOrders لكن نعرض أول 5)
+        const ordersRes = await apiFetch(`${API_BASE}/admin/orders`);
+        const orders = await ordersRes.json();
+        let html = '';
+        orders.slice(-5).reverse().forEach(o => {
+          html += `<div style="padding:8px 0;border-bottom:1px solid var(--border-color);"><strong>${o.customerName}</strong> - ${o.totalPrice} ج - ${new Date(o.createdAt).toLocaleDateString('ar-EG')}</div>`;
+        });
+        document.getElementById('recentOrdersList').innerHTML = html || '<p data-i18n="no_orders">لا توجد طلبات</p>';
+        applyTranslations();
+      } catch (err) { console.error(err); }
+    }
+
+    // ===== Init =====
+    window.addEventListener('load', async () => {
+      const ok = await ensureAdmin();
+      if (ok) {
+        loadBrand();
+        loadStats();
+        loadProducts();
+      }
+    });
+  </script>
+</body>
+</html>
