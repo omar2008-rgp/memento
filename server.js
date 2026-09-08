@@ -315,7 +315,12 @@ app.post('/api/store/orders/guest', async (req, res) => {
 
 app.get('/', (req, res) => {
   const host = req.headers.host || '';
-  if (host.includes('admin')) return res.sendFile(path.join(__dirname, 'public', 'admin.html'));
+  const siteMode = req.headers['x-site-mode'] || '';
+
+  if (siteMode === 'admin' || host.includes('admin')) {
+    return res.sendFile(path.join(__dirname, 'public', 'admin.html'));
+  }
+
   res.sendFile(path.join(__dirname, 'public', 'store.html'));
 });
 
