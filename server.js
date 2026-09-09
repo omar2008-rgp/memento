@@ -18,6 +18,15 @@ const ADMIN_PASSWORD =
 const JWT_SECRET =
   process.env.JWT_SECRET || '';
 
+const PLATFORM_ADMIN_PASSWORD =
+  process.env.PLATFORM_ADMIN_PASSWORD || '';
+
+if (!PLATFORM_ADMIN_PASSWORD) {
+  console.warn(
+    '⚠️ PLATFORM_ADMIN_PASSWORD is not set.'
+  );
+}
+
 if (!process.env.DATABASE_URL) {
   console.warn(
     '⚠️ DATABASE_URL is not set.'
@@ -568,7 +577,30 @@ async function getUsers(
     row => row.data
   );
 }
+// ============================================================
+// PLATFORM ADMIN AUTH
+// ============================================================
 
+function requirePlatformAdmin(req, res, next) {
+  const password =
+    req.headers['x-platform-password'] || '';
+
+  if (!PLATFORM_ADMIN_PASSWORD) {
+    return res.status(500).json({
+      success: false,
+      error: 'PLATFORM_ADMIN_PASSWORD is not configured'
+    });
+  }
+
+  if (password !== PLATFORM_ADMIN_PASSWORD) {
+    return res.status(401).json({
+      success: false,
+      error: 'Platform admin password is incorrect'
+    });
+  }
+
+  next();
+}
 // ============================================================
 // ADMIN AUTH
 // ============================================================
@@ -705,6 +737,310 @@ function authenticateUser(
     });
   }
 }
+// ============================================================
+// PLATFORM - TENANT MANAGEMENT
+// ============================================================
+
+// Create a new tenant/store
+app.post(
+  '/api/platform/tenants',
+  requirePlatformAdmin,
+  async (req, res) => {
+    try {
+      const {
+        id,
+        slug,
+        name,
+        storeDomain,
+        adminDomain,
+        adminPassword
+      } = req.body || {};
+
+      // --------------------------------------------------------
+      // Validation
+      // --------------------------------------------------------
+
+      if (!id || !slug || !name || !adminPassword) {
+        return res.status(400).json({
+          success: false,
+          error:
+            'id, slug, name and adminPassword are required'
+        });
+      }
+
+      const cleanId =
+        String(id).trim().toLowerCase();
+
+      const cleanSlug =
+        String(slug).trim().toLowerCase();
+
+      const cleanName =
+        String(name).trim();
+
+      const cleanStoreDomain =
+        storeDomain
+          ? String(storeDomain).trim().toLowerCase()
+          : null;
+
+      const cleanAdminDomain =
+        adminDomain
+          ? String(adminDomain).trim().toLowerCase()
+          : null;
+
+      // IDs/slugs must be simple URL-safe values
+      const validId =
+        /^[a-z0-9][a-z0-9-_]{1,49}$/.test(
+          cleanId
+        );
+
+      const validSlug =
+        /^[a-z0-9][a-z0-9-_]{1,49}$/.test(
+          cleanSlug
+        );
+
+      if (!validId) {
+        return res.status(400).json({
+          success: false,
+          error:
+            'Invalid id. Use lowercase letters, numbers, - or _'
+        });
+      }
+
+      if (!validSlug) {
+        return res.status(400).json({
+          success: false,
+          error:
+            'Invalid slug. Use lowercase letters, numbers, - or _'
+        });
+      }
+
+      if (cleanName.length < 2) {
+        return res.status(400).json({
+          success: false,
+          error:
+            'Store name must contain at least 2 characters'
+        });
+      }
+
+      if (String(adminPassword).length < 8) {
+        return res.status(400).json({
+          success: false,
+          error:
+            'Admin password must be at least 8 characters'
+        });
+      }
+
+      // --------------------------------------------------------
+      // Check duplicate tenant
+      // --------------------------------------------------------
+
+      const existingTenant =
+        await dbQuery(
+          `
+          SELECT id, slug, store_domain, admin_domain
+          FROM tenants
+          WHERE id = $1
+             OR slug = $2
+             OR ($3::text IS NOT NULL AND store_domain = $3)
+             OR ($4::text IS NOT NULL AND admin_domain = $4)
+          LIMIT 1
+          `,
+          [
+            cleanId,
+            cleanSlug,
+            cleanStoreDomain,
+            cleanAdminDomain
+          ]
+        );
+
+      if (existingTenant.rows.length > 0) {
+        return res.status(409).json({
+          success: false,
+          error:
+            'Tenant, slug or domain already exists',
+          existing:
+            existingTenant.rows[0]
+        });
+      }
+
+      // --------------------------------------------------------
+      // Hash admin password
+      // --------------------------------------------------------
+
+      const adminPasswordHash =
+        await bcrypt.hash(
+          String(adminPassword),
+          12
+        );
+
+      // --------------------------------------------------------
+      // Create tenant
+      // --------------------------------------------------------
+
+      const result =
+        await dbQuery(
+          `
+          INSERT INTO tenants (
+            id,
+            slug,
+            name,
+            store_domain,
+            admin_domain,
+            admin_password_hash
+          )
+          VALUES ($1, $2, $3, $4, $5, $6)
+          RETURNING
+            id,
+            slug,
+            name,
+            store_domain,
+            admin_domain,
+            created_at,
+            updated_at
+          `,
+          [
+            cleanId,
+            cleanSlug,
+            cleanName,
+            cleanStoreDomain,
+            cleanAdminDomain,
+            adminPasswordHash
+          ]
+        );
+
+      return res.status(201).json({
+        success: true,
+        message:
+          'Tenant created successfully',
+        tenant:
+          result.rows[0]
+      });
+
+    } catch (error) {
+      console.error(
+        'Create tenant error:',
+        error
+      );
+
+      return res.status(500).json({
+        success: false,
+        error:
+          'Failed to create tenant',
+        details:
+          error.message
+      });
+    }
+  }
+);
+
+
+// ------------------------------------------------------------
+// List all tenants
+// ------------------------------------------------------------
+
+app.get(
+  '/api/platform/tenants',
+  requirePlatformAdmin,
+  async (_req, res) => {
+    try {
+      const result =
+        await dbQuery(
+          `
+          SELECT
+            id,
+            slug,
+            name,
+            store_domain,
+            admin_domain,
+            created_at,
+            updated_at
+          FROM tenants
+          ORDER BY created_at ASC
+          `
+        );
+
+      return res.json({
+        success: true,
+        tenants:
+          result.rows
+      });
+
+    } catch (error) {
+      console.error(
+        'List tenants error:',
+        error
+      );
+
+      return res.status(500).json({
+        success: false,
+        error:
+          'Failed to load tenants'
+      });
+    }
+  }
+);
+
+
+// ------------------------------------------------------------
+// Get one tenant
+// ------------------------------------------------------------
+
+app.get(
+  '/api/platform/tenants/:id',
+  requirePlatformAdmin,
+  async (req, res) => {
+    try {
+      const tenantId =
+        String(req.params.id)
+          .trim()
+          .toLowerCase();
+
+      const result =
+        await dbQuery(
+          `
+          SELECT
+            id,
+            slug,
+            name,
+            store_domain,
+            admin_domain,
+            created_at,
+            updated_at
+          FROM tenants
+          WHERE id = $1
+          LIMIT 1
+          `,
+          [tenantId]
+        );
+
+      if (result.rows.length === 0) {
+        return res.status(404).json({
+          success: false,
+          error:
+            'Tenant not found'
+        });
+      }
+
+      return res.json({
+        success: true,
+        tenant:
+          result.rows[0]
+      });
+
+    } catch (error) {
+      console.error(
+        'Get tenant error:',
+        error
+      );
+
+      return res.status(500).json({
+        success: false,
+        error:
+          'Failed to load tenant'
+      });
+    }
+  }
+);
 // ============================================================
 // ADMIN LOGIN
 // ============================================================
