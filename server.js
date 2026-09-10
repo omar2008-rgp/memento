@@ -428,6 +428,64 @@ async function tenantMiddleware(
 }
 
 // ============================================================
+// DELIVERY PRICES BY GOVERNORATE
+// ============================================================
+
+const DELIVERY_GOVERNORATES = {
+  cairo: "القاهرة",
+  giza: "الجيزة",
+  alexandria: "الإسكندرية",
+  qalyubia: "القليوبية",
+  port_said: "بورسعيد",
+  suez: "السويس",
+  damietta: "دمياط",
+  dakahlia: "الدقهلية",
+  sharqia: "الشرقية",
+  gharbia: "الغربية",
+  kafr_elsheikh: "كفر الشيخ",
+  beheira: "البحيرة",
+  matrouh: "مطروح",
+  monufia: "المنوفية",
+  fayoum: "الفيوم",
+  beni_suef: "بني سويف",
+  minya: "المنيا",
+  asyut: "أسيوط",
+  sohag: "سوهاج",
+  qena: "قنا",
+  luxor: "الأقصر",
+  aswan: "أسوان",
+  red_sea: "البحر الأحمر",
+  new_valley: "الوادي الجديد",
+  north_sinai: "شمال سيناء",
+  south_sinai: "جنوب سيناء",
+  ismailia: "الإسماعيلية"
+};
+
+function normalizeDeliveryFees(fees, fallbackFee = 0) {
+  const result = {};
+
+  for (const key of Object.keys(DELIVERY_GOVERNORATES)) {
+    const value = Number(fees?.[key]);
+
+    result[key] =
+      Number.isFinite(value) && value >= 0
+        ? value
+        : Number(fallbackFee) || 0;
+  }
+
+  return result;
+}
+
+function getDeliveryFeeForGovernorate(brand, governorate) {
+  const fees = normalizeDeliveryFees(
+    brand?.deliveryFees,
+    brand?.deliveryFee || 0
+  );
+
+  return fees[governorate] ?? Number(brand?.deliveryFee) ?? 0;
+}
+
+// ============================================================
 // BRAND
 // ============================================================
 
@@ -1391,17 +1449,17 @@ app.post(
     res
   ) => {
     try {
+      const deliveryFees = normalizeDeliveryFees(
+        req.body.deliveryFees,
+        req.body.deliveryFee || 0
+      );
+
       const brand = {
         ...req.body,
 
-        // سعر التوصيل
-        deliveryFee:
-          Math.max(
-            0,
-            Number(
-              req.body.deliveryFee
-            ) || 0
-          ),
+        // أسعار التوصيل حسب المحافظة
+        deliveryFee: deliveryFees.cairo,
+        deliveryFees,
 
         id:
           req.body.id ||
@@ -2182,15 +2240,21 @@ app.get(
     try {
       const brand = await getBrand(req.tenantId);
 
+      const normalizedBrand = {
+        ...brand,
+        deliveryFee: Math.max(
+          0,
+          Number(brand?.deliveryFee) || 0
+        ),
+        deliveryFees: normalizeDeliveryFees(
+          brand?.deliveryFees,
+          brand?.deliveryFee || 0
+        )
+      };
+
       return res.json({
         success: true,
-        brand: {
-          ...brand,
-          deliveryFee: Math.max(
-            0,
-            Number(brand?.deliveryFee) || 0
-          )
-        }
+        brand: normalizedBrand
       });
 
     } catch (error) {
@@ -2228,13 +2292,28 @@ app.post(
         });
       }
 
-      // قراءة سعر التوصيل من بيانات المتجر
+      // قراءة المحافظة
+      const customerGovernorate =
+        String(body.customerGovernorate || '').trim();
+
+      if (
+        !customerGovernorate ||
+        !DELIVERY_GOVERNORATES[customerGovernorate]
+      ) {
+        return res.status(400).json({
+          success: false,
+          error: 'يجب اختيار المحافظة'
+        });
+      }
+
+      // قراءة سعر التوصيل حسب المحافظة
       const brand = await getBrand(req.tenantId);
 
-      const deliveryFee = Math.max(
-        0,
-        Number(brand?.deliveryFee) || 0
-      );
+      const deliveryFee =
+        getDeliveryFeeForGovernorate(
+          brand,
+          customerGovernorate
+        );
 
       // حساب الإجمالي من السيرفر
       const subtotal = items.reduce(
@@ -2258,6 +2337,8 @@ app.post(
         items,
 
         subtotal,
+
+        customerGovernorate,
 
         deliveryFee,
 
@@ -2329,12 +2410,28 @@ app.post(
         });
       }
 
+      // قراءة المحافظة
+      const customerGovernorate =
+        String(body.customerGovernorate || '').trim();
+
+      if (
+        !customerGovernorate ||
+        !DELIVERY_GOVERNORATES[customerGovernorate]
+      ) {
+        return res.status(400).json({
+          success: false,
+          error: 'يجب اختيار المحافظة'
+        });
+      }
+
       const brand = await getBrand(req.tenantId);
 
-      const deliveryFee = Math.max(
-        0,
-        Number(brand?.deliveryFee) || 0
-      );
+      // حساب التوصيل حسب المحافظة من السيرفر
+      const deliveryFee =
+        getDeliveryFeeForGovernorate(
+          brand,
+          customerGovernorate
+        );
 
       const subtotal = items.reduce(
         (sum, item) => {
@@ -2357,6 +2454,8 @@ app.post(
         items,
 
         subtotal,
+
+        customerGovernorate,
 
         deliveryFee,
 

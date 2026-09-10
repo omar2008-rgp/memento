@@ -97,6 +97,39 @@ header{position:sticky;top:0;z-index:100;min-height:76px;padding:0 34px;display:
       <div class="form-group"><label>الاسم الكامل *</label><input type="text" id="checkoutName" placeholder="أحمد محمد"></div>
       <div class="form-group"><label>رقم الهاتف *</label><input type="tel" id="checkoutPhone" placeholder="201012345678"></div>
       <div class="form-group"><label>العنوان *</label><textarea id="checkoutAddress" placeholder="شارع النيل، العمارة 5"></textarea></div>
+      <div class="form-group">
+        <label>المحافظة *</label>
+        <select id="checkoutGovernorate" onchange="updateCheckoutDelivery()">
+          <option value="">اختر المحافظة</option>
+          <option value="cairo">القاهرة</option>
+          <option value="giza">الجيزة</option>
+          <option value="alexandria">الإسكندرية</option>
+          <option value="qalyubia">القليوبية</option>
+          <option value="port_said">بورسعيد</option>
+          <option value="suez">السويس</option>
+          <option value="damietta">دمياط</option>
+          <option value="dakahlia">الدقهلية</option>
+          <option value="sharqia">الشرقية</option>
+          <option value="gharbia">الغربية</option>
+          <option value="kafr_elsheikh">كفر الشيخ</option>
+          <option value="beheira">البحيرة</option>
+          <option value="matrouh">مطروح</option>
+          <option value="monufia">المنوفية</option>
+          <option value="fayoum">الفيوم</option>
+          <option value="beni_suef">بني سويف</option>
+          <option value="minya">المنيا</option>
+          <option value="asyut">أسيوط</option>
+          <option value="sohag">سوهاج</option>
+          <option value="qena">قنا</option>
+          <option value="luxor">الأقصر</option>
+          <option value="aswan">أسوان</option>
+          <option value="red_sea">البحر الأحمر</option>
+          <option value="new_valley">الوادي الجديد</option>
+          <option value="north_sinai">شمال سيناء</option>
+          <option value="south_sinai">جنوب سيناء</option>
+          <option value="ismailia">الإسماعيلية</option>
+        </select>
+      </div>
       <div class="form-group"><label>البريد الإلكتروني (اختياري)</label><input type="email" id="checkoutEmail" placeholder="example@email.com"></div>
       <div class="modal-buttons">
         <button class="confirm" onclick="submitOrder()">✓ إرسال عبر واتس</button>
@@ -413,7 +446,17 @@ renderProducts(products);
       updateCartUI();
     }
 
+    function getSelectedGovernorate() {
+      return document.getElementById('checkoutGovernorate')?.value || '';
+    }
+
     function getDeliveryFee() {
+      const governorate = getSelectedGovernorate();
+      if (!governorate) return 0;
+      const fees = brandInfo?.deliveryFees;
+      if (fees && Object.prototype.hasOwnProperty.call(fees, governorate)) {
+        return Math.max(0, Number(fees[governorate]) || 0);
+      }
       return Math.max(0, Number(brandInfo?.deliveryFee) || 0);
     }
 
@@ -430,6 +473,31 @@ renderProducts(products);
       document.getElementById('cartDelivery').textContent = deliveryFee + ' جنيه';
       document.getElementById('cartTotal').textContent = total + ' جنيه';
       renderCartItems();
+    }
+
+    function updateCheckoutDelivery() {
+      updateCartUI();
+      refreshCheckoutSummary();
+    }
+
+    function refreshCheckoutSummary() {
+      if (cart.length === 0) return;
+      const subtotal = getCartSubtotal();
+      const governorate = getSelectedGovernorate();
+      const deliveryFee = getDeliveryFee();
+      const total = subtotal + deliveryFee;
+      let summary = '';
+      cart.forEach(item => {
+        const itemTotal = (Number(item.price) || 0) * (Number(item.quantity) || 0);
+        summary += `<p><span>${item.name} × ${item.quantity}</span><span>${itemTotal} ج</span></p>`;
+      });
+      const govText = governorate
+        ? (document.getElementById('checkoutGovernorate').selectedOptions[0]?.textContent || governorate)
+        : 'لم يتم الاختيار';
+      summary += `<p><span>📍 المحافظة</span><span>${govText}</span></p>`;
+      summary += `<p><span>🚚 التوصيل</span><span>${governorate ? deliveryFee + ' ج' : 'اختر المحافظة'}</span></p>`;
+      summary += `<div style="display:flex;justify-content:space-between;border-top:1px solid var(--line);padding-top:12px;margin-top:8px;font-weight:900;color:var(--primary);"><span>الإجمالي النهائي</span><span>${total} ج</span></div>`;
+      document.getElementById('checkoutSummary').innerHTML = summary;
     }
 
     function renderCartItems() {
@@ -475,25 +543,13 @@ renderProducts(products);
     // ===== Checkout =====
     function openCheckout() {
       if (cart.length === 0) return;
-      // إذا كان المستخدم مسجلاً، نملأ الحقول
       if (currentUser) {
         document.getElementById('checkoutName').value = currentUser.name || '';
         document.getElementById('checkoutPhone').value = currentUser.phone || '';
         document.getElementById('checkoutAddress').value = currentUser.address || '';
         document.getElementById('checkoutEmail').value = currentUser.email || '';
       }
-      // ملخص الطلب
-      let summary = '';
-      const subtotal = getCartSubtotal();
-      const deliveryFee = getDeliveryFee();
-      const total = subtotal + deliveryFee;
-      cart.forEach(item => {
-        const itemTotal = (Number(item.price) || 0) * (Number(item.quantity) || 0);
-        summary += `<p><span>${item.name} × ${item.quantity}</span><span>${itemTotal} ج</span></p>`;
-      });
-      summary += `<p><span>🚚 التوصيل</span><span>${deliveryFee} ج</span></p>`;
-      summary += `<div style="display:flex;justify-content:space-between;border-top:1px solid var(--line);padding-top:12px;margin-top:8px;font-weight:900;color:var(--primary);"><span>الإجمالي النهائي</span><span>${total} ج</span></div>`;
-      document.getElementById('checkoutSummary').innerHTML = summary;
+      refreshCheckoutSummary();
       document.getElementById('checkoutModal').classList.add('show');
       document.getElementById('checkoutOverlay').classList.add('show');
     }
@@ -508,37 +564,54 @@ renderProducts(products);
       const phone = document.getElementById('checkoutPhone').value.trim();
       const address = document.getElementById('checkoutAddress').value.trim();
       const email = document.getElementById('checkoutEmail').value.trim();
-      if (!name || !phone || !address) {
-        alert('الرجاء ملء جميع الحقول المطلوبة');
+      const governorate = document.getElementById('checkoutGovernorate').value;
+
+      if (!name || !phone || !address || !governorate) {
+        alert('الرجاء ملء جميع الحقول المطلوبة واختيار المحافظة');
         return;
       }
+
       const subtotal = getCartSubtotal();
       const deliveryFee = getDeliveryFee();
       const totalPrice = subtotal + deliveryFee;
-      const order = { customerName: name, customerPhone: phone, customerAddress: address, customerEmail: email, items: cart, subtotal, deliveryFee, totalPrice };
+
+      const order = {
+        customerName: name,
+        customerPhone: phone,
+        customerAddress: address,
+        customerEmail: email,
+        customerGovernorate: governorate,
+        items: cart,
+        subtotal,
+        deliveryFee,
+        totalPrice
+      };
 
       try {
-        // إذا كان المستخدم مسجلاً، نستخدم المسار المحمي
         const endpoint = userToken ? '/api/store/orders' : '/api/store/orders/guest';
         const options = {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(order)
         };
-        if (userToken) {
-          options.headers = { ...options.headers, ...setAuthHeader() };
-        }
+        if (userToken) options.headers = { ...options.headers, ...setAuthHeader() };
+
         const res = await fetch(endpoint, options);
-        if (!res.ok) throw new Error('فشل حفظ الطلب');
-        // إرسال عبر واتس
-        let message = `🛍️ *طلب جديد من المتجر*\n\n👤 *بيانات العميل:*\nالاسم: ${name}\nالهاتف: ${phone}\nالعنوان: ${address}\n${email ? 'البريد: '+email+'\n' : ''}\n📦 *المنتجات:*\n`;
-        cart.forEach(item => { message += `• ${item.name} × ${item.quantity} = ${item.price * item.quantity} ج\n`; });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error(data.error || 'فشل حفظ الطلب');
+
+        const govText = document.getElementById('checkoutGovernorate').selectedOptions[0]?.textContent || governorate;
+        let message = `🛍️ *طلب جديد من المتجر*\n\n👤 *بيانات العميل:*\nالاسم: ${name}\nالهاتف: ${phone}\nالمحافظة: ${govText}\nالعنوان: ${address}\n${email ? 'البريد: '+email+'\\n' : ''}\n📦 *المنتجات:*\n`;
+        cart.forEach(item => {
+          message += `• ${item.name} × ${item.quantity} = ${item.price * item.quantity} ج\n`;
+        });
         message += `\n🚚 *سعر التوصيل: ${deliveryFee} جنيه*`;
         message += `\n💰 *الإجمالي النهائي: ${totalPrice} جنيه*`;
+
         const waPhone = brandInfo?.whatsapp || '201012345678';
         const waLink = `https://wa.me/${waPhone}?text=${encodeURIComponent(message)}`;
         window.open(waLink, '_blank');
-        // تنظيف السلة
+
         cart = [];
         updateCartUI();
         closeCheckout();

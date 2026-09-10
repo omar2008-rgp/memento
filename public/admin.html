@@ -26,7 +26,9 @@ button{border:0;border-radius:12px;padding:11px 17px;background:linear-gradient(
 #ordersList,#usersList{padding:16px}#ordersList>.card,#usersList>.card{box-shadow:none;border:1px solid var(--line);margin-bottom:12px}#recentOrdersList{padding:6px 18px}#recentOrdersList>div{padding:13px 4px!important;border-bottom:1px solid var(--line)!important}
 @media(max-width:900px){.stats-grid,.two-col{grid-template-columns:1fr}}@media(max-width:680px){header{padding:0 14px;min-height:68px}header h1{font-size:17px}.header-right{gap:5px}.theme-btn,.lang-btn,.logout-btn{padding:8px 9px;font-size:11px}.container{width:calc(100% - 22px);padding-top:18px}.form-section{padding:16px}.grid{grid-template-columns:1fr}}
 
-  </style>
+  
+.delivery-row{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:11px 12px;border:1px solid var(--line);border-radius:12px;background:var(--surface2)}.delivery-row>span{font-size:13px;font-weight:800}.delivery-input-wrap{display:flex;align-items:center;gap:6px;min-width:125px}.delivery-input-wrap input{padding:9px 10px}.delivery-input-wrap span{font-size:11px;color:var(--muted);font-weight:800;white-space:nowrap}
+</style>
 </head>
 <body>
   <header>
@@ -72,7 +74,7 @@ button{border:0;border-radius:12px;padding:11px 17px;background:linear-gradient(
           <div class="form-group"><label data-i18n="phone">رقم الهاتف *</label><input type="tel" id="brandPhone"></div>
           <div class="form-group"><label data-i18n="email">البريد الإلكتروني</label><input type="email" id="brandEmail"></div>
           <div class="form-group"><label data-i18n="account_name">اسم الحساب</label><input type="text" id="brandAccountName"></div>
-          <div class="form-group"><label>🚚 سعر التوصيل (جنيه)</label><input type="number" id="deliveryFee" min="0" step="1" placeholder="مثال: 50"></div>
+          <div class="form-group"><div style="padding:12px;border-radius:12px;background:var(--surface2);border:1px solid var(--line);font-size:12px;color:var(--muted);">🚚 تم تطوير التوصيل ليكون بسعر مختلف لكل محافظة.</div></div>
         </div>
         <div class="form-section">
           <h3 data-i18n="social">وسائل التواصل</h3>
@@ -82,6 +84,40 @@ button{border:0;border-radius:12px;padding:11px 17px;background:linear-gradient(
           <div class="form-group"><label data-i18n="tiktok">معرّف التيك توك</label><input type="text" id="brandTiktok"></div>
         </div>
       </div>
+<div class="form-section" style="margin-top:18px;">
+          <h3>🚚 أسعار التوصيل حسب المحافظة</h3>
+          <p style="color:var(--muted);font-size:12px;margin:8px 0 18px;">حدد سعر التوصيل لكل محافظة. السعر الذي يختاره العميل سيُحسب تلقائياً عند إتمام الطلب.</p>
+          <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:10px;">
+            <div class="delivery-row"><span>📍 القاهرة</span><div class="delivery-input-wrap"><input type="number" id="delivery_cairo" min="0" step="1" placeholder="0"><span>جنيه</span></div></div>
+            <div class="delivery-row"><span>📍 الجيزة</span><div class="delivery-input-wrap"><input type="number" id="delivery_giza" min="0" step="1" placeholder="0"><span>جنيه</span></div></div>
+            <div class="delivery-row"><span>📍 الإسكندرية</span><div class="delivery-input-wrap"><input type="number" id="delivery_alexandria" min="0" step="1" placeholder="0"><span>جنيه</span></div></div>
+            <div class="delivery-row"><span>📍 القليوبية</span><div class="delivery-input-wrap"><input type="number" id="delivery_qalyubia" min="0" step="1" placeholder="0"><span>جنيه</span></div></div>
+            <div class="delivery-row"><span>📍 بورسعيد</span><div class="delivery-input-wrap"><input type="number" id="delivery_port_said" min="0" step="1" placeholder="0"><span>جنيه</span></div></div>
+            <div class="delivery-row"><span>📍 السويس</span><div class="delivery-input-wrap"><input type="number" id="delivery_suez" min="0" step="1" placeholder="0"><span>جنيه</span></div></div>
+            <div class="delivery-row"><span>📍 دمياط</span><div class="delivery-input-wrap"><input type="number" id="delivery_damietta" min="0" step="1" placeholder="0"><span>جنيه</span></div></div>
+            <div class="delivery-row"><span>📍 الدقهلية</span><div class="delivery-input-wrap"><input type="number" id="delivery_dakahlia" min="0" step="1" placeholder="0"><span>جنيه</span></div></div>
+            <div class="delivery-row"><span>📍 الشرقية</span><div class="delivery-input-wrap"><input type="number" id="delivery_sharqia" min="0" step="1" placeholder="0"><span>جنيه</span></div></div>
+            <div class="delivery-row"><span>📍 الغربية</span><div class="delivery-input-wrap"><input type="number" id="delivery_gharbia" min="0" step="1" placeholder="0"><span>جنيه</span></div></div>
+            <div class="delivery-row"><span>📍 كفر الشيخ</span><div class="delivery-input-wrap"><input type="number" id="delivery_kafr_elsheikh" min="0" step="1" placeholder="0"><span>جنيه</span></div></div>
+            <div class="delivery-row"><span>📍 البحيرة</span><div class="delivery-input-wrap"><input type="number" id="delivery_beheira" min="0" step="1" placeholder="0"><span>جنيه</span></div></div>
+            <div class="delivery-row"><span>📍 مطروح</span><div class="delivery-input-wrap"><input type="number" id="delivery_matrouh" min="0" step="1" placeholder="0"><span>جنيه</span></div></div>
+            <div class="delivery-row"><span>📍 المنوفية</span><div class="delivery-input-wrap"><input type="number" id="delivery_monufia" min="0" step="1" placeholder="0"><span>جنيه</span></div></div>
+            <div class="delivery-row"><span>📍 الفيوم</span><div class="delivery-input-wrap"><input type="number" id="delivery_fayoum" min="0" step="1" placeholder="0"><span>جنيه</span></div></div>
+            <div class="delivery-row"><span>📍 بني سويف</span><div class="delivery-input-wrap"><input type="number" id="delivery_beni_suef" min="0" step="1" placeholder="0"><span>جنيه</span></div></div>
+            <div class="delivery-row"><span>📍 المنيا</span><div class="delivery-input-wrap"><input type="number" id="delivery_minya" min="0" step="1" placeholder="0"><span>جنيه</span></div></div>
+            <div class="delivery-row"><span>📍 أسيوط</span><div class="delivery-input-wrap"><input type="number" id="delivery_asyut" min="0" step="1" placeholder="0"><span>جنيه</span></div></div>
+            <div class="delivery-row"><span>📍 سوهاج</span><div class="delivery-input-wrap"><input type="number" id="delivery_sohag" min="0" step="1" placeholder="0"><span>جنيه</span></div></div>
+            <div class="delivery-row"><span>📍 قنا</span><div class="delivery-input-wrap"><input type="number" id="delivery_qena" min="0" step="1" placeholder="0"><span>جنيه</span></div></div>
+            <div class="delivery-row"><span>📍 الأقصر</span><div class="delivery-input-wrap"><input type="number" id="delivery_luxor" min="0" step="1" placeholder="0"><span>جنيه</span></div></div>
+            <div class="delivery-row"><span>📍 أسوان</span><div class="delivery-input-wrap"><input type="number" id="delivery_aswan" min="0" step="1" placeholder="0"><span>جنيه</span></div></div>
+            <div class="delivery-row"><span>📍 البحر الأحمر</span><div class="delivery-input-wrap"><input type="number" id="delivery_red_sea" min="0" step="1" placeholder="0"><span>جنيه</span></div></div>
+            <div class="delivery-row"><span>📍 الوادي الجديد</span><div class="delivery-input-wrap"><input type="number" id="delivery_new_valley" min="0" step="1" placeholder="0"><span>جنيه</span></div></div>
+            <div class="delivery-row"><span>📍 شمال سيناء</span><div class="delivery-input-wrap"><input type="number" id="delivery_north_sinai" min="0" step="1" placeholder="0"><span>جنيه</span></div></div>
+            <div class="delivery-row"><span>📍 جنوب سيناء</span><div class="delivery-input-wrap"><input type="number" id="delivery_south_sinai" min="0" step="1" placeholder="0"><span>جنيه</span></div></div>
+            <div class="delivery-row"><span>📍 الإسماعيلية</span><div class="delivery-input-wrap"><input type="number" id="delivery_ismailia" min="0" step="1" placeholder="0"><span>جنيه</span></div></div>
+          </div>
+          <div style="margin-top:18px;"><button onclick="saveDeliveryFees()">💾 حفظ أسعار التوصيل</button></div>
+        </div>
       <div class="form-section">
         <h3 data-i18n="logo">شعار البراند</h3>
         <div class="form-group"><label data-i18n="logo_url">رابط الشعار</label><input type="text" id="brandLogo"></div>
@@ -263,6 +299,25 @@ button{border:0;border-radius:12px;padding:11px 17px;background:linear-gradient(
     }
 
     // ===== Brand =====
+    const GOVERNORATES = {"cairo": "القاهرة", "giza": "الجيزة", "alexandria": "الإسكندرية", "qalyubia": "القليوبية", "port_said": "بورسعيد", "suez": "السويس", "damietta": "دمياط", "dakahlia": "الدقهلية", "sharqia": "الشرقية", "gharbia": "الغربية", "kafr_elsheikh": "كفر الشيخ", "beheira": "البحيرة", "matrouh": "مطروح", "monufia": "المنوفية", "fayoum": "الفيوم", "beni_suef": "بني سويف", "minya": "المنيا", "asyut": "أسيوط", "sohag": "سوهاج", "qena": "قنا", "luxor": "الأقصر", "aswan": "أسوان", "red_sea": "البحر الأحمر", "new_valley": "الوادي الجديد", "north_sinai": "شمال سيناء", "south_sinai": "جنوب سيناء", "ismailia": "الإسماعيلية"};
+
+    function getDeliveryFeesFromForm() {
+      const fees = {};
+      Object.keys(GOVERNORATES).forEach(key => {
+        fees[key] = Math.max(0, Number(document.getElementById('delivery_' + key)?.value) || 0);
+      });
+      return fees;
+    }
+
+    function fillDeliveryFees(fees, fallbackFee = 0) {
+      const source = (fees && typeof fees === 'object') ? fees : {};
+      Object.keys(GOVERNORATES).forEach(key => {
+        const value = Object.prototype.hasOwnProperty.call(source, key) ? source[key] : fallbackFee;
+        const input = document.getElementById('delivery_' + key);
+        if (input) input.value = Math.max(0, Number(value) || 0);
+      });
+    }
+
     async function loadBrand() {
       try {
         const res = await apiFetch(`${API_BASE}/admin/brand`);
@@ -272,12 +327,12 @@ button{border:0;border-radius:12px;padding:11px 17px;background:linear-gradient(
         document.getElementById('brandPhone').value = brand.phone || '';
         document.getElementById('brandEmail').value = brand.email || '';
         document.getElementById('brandAccountName').value = brand.accountName || '';
-        document.getElementById('deliveryFee').value = Number(brand.deliveryFee) || 0;
         document.getElementById('brandWhatsapp').value = brand.whatsapp || '';
         document.getElementById('brandFacebook').value = brand.facebook || '';
         document.getElementById('brandInstagram').value = brand.instagram || '';
         document.getElementById('brandTiktok').value = brand.tiktok || '';
         document.getElementById('brandLogo').value = brand.logo || '';
+        fillDeliveryFees(brand.deliveryFees, Number(brand.deliveryFee) || 0);
       } catch (err) { console.error(err); }
     }
 
@@ -286,12 +341,14 @@ button{border:0;border-radius:12px;padding:11px 17px;background:linear-gradient(
         let logo = document.getElementById('brandLogo').value.trim();
         const file = document.getElementById('brandLogoFile').files[0];
         if (file) logo = await uploadImage(file);
+        const fees = getDeliveryFeesFromForm();
         const brand = {
           name: document.getElementById('brandName').value.trim(),
           phone: document.getElementById('brandPhone').value.trim(),
           email: document.getElementById('brandEmail').value.trim(),
           accountName: document.getElementById('brandAccountName').value.trim(),
-          deliveryFee: Math.max(0, Number(document.getElementById('deliveryFee').value) || 0),
+          deliveryFee: Math.max(0, Number(fees.cairo) || 0),
+          deliveryFees: fees,
           logo,
           whatsapp: document.getElementById('brandWhatsapp').value.trim(),
           facebook: document.getElementById('brandFacebook').value.trim(),
@@ -301,7 +358,22 @@ button{border:0;border-radius:12px;padding:11px 17px;background:linear-gradient(
         if (!brand.name || !brand.phone) throw new Error('اسم البراند ورقم الهاتف مطلوبان');
         const res = await apiFetch(`${API_BASE}/admin/brand`, {method:'POST', headers:authHeaders(true), body:JSON.stringify(brand)});
         if (!res.ok) throw new Error('فشل حفظ بيانات البراند');
-        alert('✅ تم حفظ البيانات');
+        alert('✅ تم حفظ بيانات البراند وأسعار التوصيل');
+      } catch (err) { alert('❌ ' + err.message); }
+    }
+
+    async function saveDeliveryFees() {
+      try {
+        const fees = getDeliveryFeesFromForm();
+        const res = await apiFetch(`${API_BASE}/admin/brand`);
+        const current = await res.json();
+        if (!current) throw new Error('تعذر قراءة بيانات المتجر');
+        const brand = { ...current, deliveryFee: Math.max(0, Number(fees.cairo) || 0), deliveryFees: fees };
+        const saveRes = await apiFetch(`${API_BASE}/admin/brand`, {
+          method:'POST', headers:authHeaders(true), body:JSON.stringify(brand)
+        });
+        if (!saveRes.ok) throw new Error('فشل حفظ أسعار التوصيل');
+        alert('✅ تم حفظ أسعار التوصيل لكل المحافظات');
       } catch (err) { alert('❌ ' + err.message); }
     }
 
