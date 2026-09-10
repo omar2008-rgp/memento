@@ -623,6 +623,88 @@ function requirePlatformAdmin(
 const adminSessions =
   new Map();
 
+
+function requireUser(req, res, next) {
+  try {
+    const auth = req.headers.authorization || "";
+    const token = auth.startsWith("Bearer ") ? auth.slice(7).trim() : "";
+
+    if (!token) {
+      return res.status(401).json({
+        success: false,
+        error: "Authentication required"
+      });
+    }
+
+    const decoded = jwt.verify(token, JWT_SECRET);
+
+    if (!decoded.userId || !decoded.tenantId) {
+      return res.status(401).json({
+        success: false,
+        error: "Invalid authentication token"
+      });
+    }
+
+    if (decoded.tenantId !== req.tenantId) {
+      return res.status(403).json({
+        success: false,
+        error: "Invalid tenant"
+      });
+    }
+
+    req.userId = decoded.userId;
+    req.userEmail = decoded.email || "";
+
+    next();
+  } catch (error) {
+    return res.status(401).json({
+      success: false,
+      error: "Invalid or expired token"
+    });
+  }
+}
+
+
+function requireUser(req, res, next) {
+  try {
+    const auth = req.headers.authorization || "";
+    const token = auth.startsWith("Bearer ") ? auth.slice(7).trim() : "";
+
+    if (!token) {
+      return res.status(401).json({
+        success: false,
+        error: "Authentication required"
+      });
+    }
+
+    const decoded = jwt.verify(token, JWT_SECRET);
+
+    if (!decoded.userId || !decoded.tenantId) {
+      return res.status(401).json({
+        success: false,
+        error: "Invalid authentication token"
+      });
+    }
+
+    if (decoded.tenantId !== req.tenantId) {
+      return res.status(403).json({
+        success: false,
+        error: "Invalid tenant"
+      });
+    }
+
+    req.userId = decoded.userId;
+    req.userEmail = decoded.email || "";
+
+    next();
+  } catch (error) {
+    return res.status(401).json({
+      success: false,
+      error: "Invalid or expired token"
+    });
+  }
+}
+
 function requireAdmin(
   req,
   res,
