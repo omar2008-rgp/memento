@@ -81,7 +81,7 @@ async function dbQuery(
 }
 
 // ============================================================
-// SAFE DATABASE CONNECTION TEST
+// DATABASE CONNECTION TEST
 // ============================================================
 
 async function testDatabaseConnection() {
@@ -326,7 +326,9 @@ async function getTenantById(
   );
 }
 
-async function getTenantByDomain(domain) {
+async function getTenantByDomain(
+  domain
+) {
   const { rows } = await dbQuery(
     `
       SELECT *
@@ -577,30 +579,43 @@ async function getUsers(
     row => row.data
   );
 }
+
 // ============================================================
 // PLATFORM ADMIN AUTH
 // ============================================================
 
-function requirePlatformAdmin(req, res, next) {
+function requirePlatformAdmin(
+  req,
+  res,
+  next
+) {
   const password =
-    req.headers['x-platform-password'] || '';
+    req.headers[
+      'x-platform-password'
+    ] || '';
 
   if (!PLATFORM_ADMIN_PASSWORD) {
     return res.status(500).json({
       success: false,
-      error: 'PLATFORM_ADMIN_PASSWORD is not configured'
+      error:
+        'PLATFORM_ADMIN_PASSWORD is not configured'
     });
   }
 
-  if (password !== PLATFORM_ADMIN_PASSWORD) {
+  if (
+    password !==
+    PLATFORM_ADMIN_PASSWORD
+  ) {
     return res.status(401).json({
       success: false,
-      error: 'Platform admin password is incorrect'
+      error:
+        'Platform admin password is incorrect'
     });
   }
 
   next();
 }
+
 // ============================================================
 // ADMIN AUTH
 // ============================================================
@@ -738,10 +753,9 @@ function authenticateUser(
   }
 }
 // ============================================================
-// PLATFORM - TENANT MANAGEMENT
+// PLATFORM - TENANTS
 // ============================================================
 
-// Create a new tenant/store
 app.post(
   '/api/platform/tenants',
   requirePlatformAdmin,
@@ -756,73 +770,75 @@ app.post(
         adminPassword
       } = req.body || {};
 
-      // --------------------------------------------------------
-      // Validation
-      // --------------------------------------------------------
+      const tenantId =
+        String(
+          id || slug || ''
+        )
+          .trim()
+          .toLowerCase();
 
-      if (!id || !slug || !name || !adminPassword) {
+      const tenantSlug =
+        String(
+          slug || id || ''
+        )
+          .trim()
+          .toLowerCase();
+
+      const tenantName =
+        String(
+          name || ''
+        ).trim();
+
+      const storeDomainValue =
+        String(
+          storeDomain || ''
+        ).trim().toLowerCase();
+
+      const adminDomainValue =
+        String(
+          adminDomain || ''
+        ).trim().toLowerCase();
+
+      if (
+        !tenantId ||
+        !/^[a-z0-9][a-z0-9-_]{1,49}$/.test(
+          tenantId
+        )
+      ) {
         return res.status(400).json({
           success: false,
           error:
-            'id, slug, name and adminPassword are required'
+            'Invalid tenant id'
         });
       }
 
-      const cleanId =
-        String(id).trim().toLowerCase();
-
-      const cleanSlug =
-        String(slug).trim().toLowerCase();
-
-      const cleanName =
-        String(name).trim();
-
-      const cleanStoreDomain =
-        storeDomain
-          ? String(storeDomain).trim().toLowerCase()
-          : null;
-
-      const cleanAdminDomain =
-        adminDomain
-          ? String(adminDomain).trim().toLowerCase()
-          : null;
-
-      // IDs/slugs must be simple URL-safe values
-      const validId =
-        /^[a-z0-9][a-z0-9-_]{1,49}$/.test(
-          cleanId
-        );
-
-      const validSlug =
-        /^[a-z0-9][a-z0-9-_]{1,49}$/.test(
-          cleanSlug
-        );
-
-      if (!validId) {
+      if (
+        !tenantSlug ||
+        !/^[a-z0-9][a-z0-9-_]{1,49}$/.test(
+          tenantSlug
+        )
+      ) {
         return res.status(400).json({
           success: false,
           error:
-            'Invalid id. Use lowercase letters, numbers, - or _'
+            'Invalid tenant slug'
         });
       }
 
-      if (!validSlug) {
+      if (
+        tenantName.length < 2
+      ) {
         return res.status(400).json({
           success: false,
           error:
-            'Invalid slug. Use lowercase letters, numbers, - or _'
+            'Tenant name is required'
         });
       }
 
-      if (cleanName.length < 2) {
-        return res.status(400).json({
-          success: false,
-          error:
-            'Store name must contain at least 2 characters'
-        });
-      }
-
-      if (String(adminPassword).length < 8) {
+      if (
+        !adminPassword ||
+        String(adminPassword).length < 8
+      ) {
         return res.status(400).json({
           success: false,
           error:
@@ -830,90 +846,96 @@ app.post(
         });
       }
 
-      // --------------------------------------------------------
-      // Check duplicate tenant
-      // --------------------------------------------------------
-
-      const existingTenant =
-        await dbQuery(
-          `
-          SELECT id, slug, store_domain, admin_domain
-          FROM tenants
-          WHERE id = $1
-             OR slug = $2
-             OR ($3::text IS NOT NULL AND store_domain = $3)
-             OR ($4::text IS NOT NULL AND admin_domain = $4)
-          LIMIT 1
-          `,
-          [
-            cleanId,
-            cleanSlug,
-            cleanStoreDomain,
-            cleanAdminDomain
-          ]
-        );
-
-      if (existingTenant.rows.length > 0) {
-        return res.status(409).json({
+      if (
+        !storeDomainValue ||
+        !adminDomainValue
+      ) {
+        return res.status(400).json({
           success: false,
           error:
-            'Tenant, slug or domain already exists',
-          existing:
-            existingTenant.rows[0]
+            'Store domain and admin domain are required'
         });
       }
 
-      // --------------------------------------------------------
-      // Hash admin password
-      // --------------------------------------------------------
+      const existing =
+        await dbQuery(
+          `
+            SELECT id
+            FROM tenants
+            WHERE id = $1
+               OR slug = $2
+               OR store_domain = $3
+               OR admin_domain = $4
+            LIMIT 1
+          `,
+          [
+            tenantId,
+            tenantSlug,
+            storeDomainValue,
+            adminDomainValue
+          ]
+        );
 
-      const adminPasswordHash =
+      if (
+        existing.rows.length
+      ) {
+        return res.status(409).json({
+          success: false,
+          error:
+            'Tenant already exists'
+        });
+      }
+
+      const passwordHash =
         await bcrypt.hash(
           String(adminPassword),
           12
         );
 
-      // --------------------------------------------------------
-      // Create tenant
-      // --------------------------------------------------------
-
-      const result =
-        await dbQuery(
-          `
+      await dbQuery(
+        `
           INSERT INTO tenants (
             id,
             slug,
             name,
             store_domain,
             admin_domain,
-            admin_password_hash
-          )
-          VALUES ($1, $2, $3, $4, $5, $6)
-          RETURNING
-            id,
-            slug,
-            name,
-            store_domain,
-            admin_domain,
+            admin_password_hash,
             created_at,
             updated_at
-          `,
-          [
-            cleanId,
-            cleanSlug,
-            cleanName,
-            cleanStoreDomain,
-            cleanAdminDomain,
-            adminPasswordHash
-          ]
-        );
+          )
+          VALUES (
+            $1,
+            $2,
+            $3,
+            $4,
+            $5,
+            $6,
+            NOW(),
+            NOW()
+          )
+        `,
+        [
+          tenantId,
+          tenantSlug,
+          tenantName,
+          storeDomainValue,
+          adminDomainValue,
+          passwordHash
+        ]
+      );
 
       return res.status(201).json({
         success: true,
-        message:
-          'Tenant created successfully',
-        tenant:
-          result.rows[0]
+        tenant: {
+          id: tenantId,
+          slug: tenantSlug,
+          name: tenantName,
+          storeDomain:
+            storeDomainValue,
+          adminDomain:
+            adminDomainValue
+        }
       });
 
     } catch (error) {
@@ -925,27 +947,25 @@ app.post(
       return res.status(500).json({
         success: false,
         error:
-          'Failed to create tenant',
-        details:
-          error.message
+          'Failed to create tenant'
       });
     }
   }
 );
 
-
-// ------------------------------------------------------------
-// List all tenants
-// ------------------------------------------------------------
+// ============================================================
+// PLATFORM - GET TENANTS
+// ============================================================
 
 app.get(
   '/api/platform/tenants',
   requirePlatformAdmin,
   async (_req, res) => {
     try {
-      const result =
-        await dbQuery(
-          `
+      const {
+        rows
+      } = await dbQuery(
+        `
           SELECT
             id,
             slug,
@@ -956,18 +976,17 @@ app.get(
             updated_at
           FROM tenants
           ORDER BY created_at ASC
-          `
-        );
+        `
+      );
 
       return res.json({
         success: true,
-        tenants:
-          result.rows
+        tenants: rows
       });
 
     } catch (error) {
       console.error(
-        'List tenants error:',
+        'Get tenants error:',
         error
       );
 
@@ -980,10 +999,9 @@ app.get(
   }
 );
 
-
-// ------------------------------------------------------------
-// Get one tenant
-// ------------------------------------------------------------
+// ============================================================
+// PLATFORM - GET ONE TENANT
+// ============================================================
 
 app.get(
   '/api/platform/tenants/:id',
@@ -991,13 +1009,16 @@ app.get(
   async (req, res) => {
     try {
       const tenantId =
-        String(req.params.id)
+        String(
+          req.params.id || ''
+        )
           .trim()
           .toLowerCase();
 
-      const result =
-        await dbQuery(
-          `
+      const {
+        rows
+      } = await dbQuery(
+        `
           SELECT
             id,
             slug,
@@ -1009,11 +1030,13 @@ app.get(
           FROM tenants
           WHERE id = $1
           LIMIT 1
-          `,
-          [tenantId]
-        );
+        `,
+        [tenantId]
+      );
 
-      if (result.rows.length === 0) {
+      if (
+        rows.length === 0
+      ) {
         return res.status(404).json({
           success: false,
           error:
@@ -1024,7 +1047,7 @@ app.get(
       return res.json({
         success: true,
         tenant:
-          result.rows[0]
+          rows[0]
       });
 
     } catch (error) {
@@ -1041,6 +1064,7 @@ app.get(
     }
   }
 );
+
 // ============================================================
 // ADMIN LOGIN
 // ============================================================
@@ -1050,34 +1074,44 @@ app.post(
   tenantMiddleware,
   async (req, res) => {
     try {
-      const { password } = req.body || {};
+      const {
+        password
+      } = req.body || {};
 
       if (!password) {
         return res.status(401).json({
-          error: 'كلمة المرور غير صحيحة'
+          error:
+            'كلمة المرور غير صحيحة'
         });
       }
 
-      const tenant = req.tenant;
-      let validPassword = false;
+      const tenant =
+        req.tenant;
 
-      // Each tenant has its own bcrypt admin password.
-      if (tenant.admin_password_hash) {
-        validPassword = await bcrypt.compare(
-          password,
-          tenant.admin_password_hash
-        );
+      let validPassword =
+        false;
+
+      // Each tenant has its own
+      // bcrypt admin password.
+      if (
+        tenant.admin_password_hash
+      ) {
+        validPassword =
+          await bcrypt.compare(
+            password,
+            tenant.admin_password_hash
+          );
       }
 
-      // Temporary compatibility for the existing Memento store.
-      // On the first successful login, the password is converted
-      // to a bcrypt hash and stored for the Memento tenant.
+      // Compatibility with
+      // existing Memento setup.
       else if (
         tenant.id === 'memento' &&
         ADMIN_PASSWORD
       ) {
         validPassword =
-          password === ADMIN_PASSWORD;
+          password ===
+          ADMIN_PASSWORD;
 
         if (validPassword) {
           const passwordHash =
@@ -1100,14 +1134,16 @@ app.post(
             ]
           );
 
-          req.tenant.admin_password_hash =
+          req.tenant
+            .admin_password_hash =
             passwordHash;
         }
       }
 
       if (!validPassword) {
         return res.status(401).json({
-          error: 'كلمة المرور غير صحيحة'
+          error:
+            'كلمة المرور غير صحيحة'
         });
       }
 
@@ -1131,7 +1167,7 @@ app.post(
         }
       );
 
-      res.json({
+      return res.json({
         success: true,
         token
       });
@@ -1142,7 +1178,7 @@ app.post(
         error
       );
 
-      res.status(500).json({
+      return res.status(500).json({
         error:
           'Database error'
       });
@@ -1276,6 +1312,15 @@ app.post(
       const brand = {
         ...req.body,
 
+        // سعر التوصيل
+        deliveryFee:
+          Math.max(
+            0,
+            Number(
+              req.body.deliveryFee
+            ) || 0
+          ),
+
         id:
           req.body.id ||
           uuidv4()
@@ -1290,6 +1335,7 @@ app.post(
         success: true,
         brand
       });
+
     } catch (error) {
       console.error(
         error
@@ -1411,6 +1457,7 @@ app.post(
         success: true,
         product
       });
+
     } catch (error) {
       console.error(
         error
@@ -1432,47 +1479,68 @@ app.delete(
   '/api/admin/products/:id',
   tenantMiddleware,
   requireAdmin,
-  async (req, res) => {
+  async (
+    req,
+    res
+  ) => {
     try {
-      const productId = String(req.params.id || '').trim();
+      const productId =
+        String(
+          req.params.id || ''
+        ).trim();
 
       if (!productId) {
         return res.status(400).json({
           success: false,
-          error: 'Product ID is required'
+          error:
+            'Product ID is required'
         });
       }
 
       // مهم جداً:
-      // الحذف يكون للمنتج التابع لنفس الـ tenant فقط
-      const result = await dbQuery(
-        `
-        DELETE FROM products
-        WHERE id = $1
-          AND tenant_id = $2
-        `,
-        [productId, req.tenantId]
-      );
+      // الحذف يكون للمنتج التابع
+      // لنفس الـ tenant فقط.
+      const result =
+        await dbQuery(
+          `
+            DELETE FROM products
+            WHERE id = $1
+              AND tenant_id = $2
+          `,
+          [
+            productId,
+            req.tenantId
+          ]
+        );
 
-      if (result.rowCount === 0) {
+      if (
+        result.rowCount === 0
+      ) {
         return res.status(404).json({
           success: false,
-          error: 'Product not found'
+          error:
+            'Product not found'
         });
       }
 
       return res.json({
         success: true,
-        message: 'Product deleted successfully',
-        id: productId
+        message:
+          'Product deleted successfully',
+        id:
+          productId
       });
 
     } catch (error) {
-      console.error('Delete product error:', error);
+      console.error(
+        'Delete product error:',
+        error
+      );
 
       return res.status(500).json({
         success: false,
-        error: 'Database error'
+        error:
+          'Database error'
       });
     }
   }
@@ -1535,6 +1603,7 @@ app.get(
           }) => safe
         )
       );
+
     } catch (error) {
       console.error(
         error
@@ -1595,6 +1664,7 @@ app.get(
         totalUsers:
           users.length
       });
+
     } catch (error) {
       console.error(
         error
@@ -1607,764 +1677,801 @@ app.get(
     }
   }
 );
-
 // ============================================================
-// REGISTER
+// PART 3 — CUSTOMER AUTH + STORE APIs + ORDERS + START SERVER
 // ============================================================
 
-app.post(
-  '/api/auth/register',
-  tenantMiddleware,
-  async (
-    req,
-    res
-  ) => {
-    try {
-      const {
+// ------------------------------------------------------------
+// CUSTOMER REGISTER
+// ------------------------------------------------------------
+
+app.post('/api/auth/register', tenantMiddleware, async (req, res) => {
+  try {
+    const {
+      name,
+      email,
+      password,
+      phone,
+      address
+    } = req.body || {};
+
+    if (!name || !email || !password) {
+      return res.status(400).json({
+        success: false,
+        error: 'Name, email and password are required'
+      });
+    }
+
+    if (String(password).length < 6) {
+      return res.status(400).json({
+        success: false,
+        error: 'Password must be at least 6 characters'
+      });
+    }
+
+    const normalizedEmail = String(email).trim().toLowerCase();
+
+    const existing = await dbQuery(
+      `
+      SELECT id
+      FROM users
+      WHERE tenant_id = $1
+        AND LOWER(email) = LOWER($2)
+      LIMIT 1
+      `,
+      [req.tenantId, normalizedEmail]
+    );
+
+    if (existing.rows.length > 0) {
+      return res.status(409).json({
+        success: false,
+        error: 'Email already registered'
+      });
+    }
+
+    const hashedPassword = await bcrypt.hash(String(password), 12);
+
+    const user = {
+      id: uuidv4(),
+      name: String(name).trim(),
+      email: normalizedEmail,
+      phone: phone ? String(phone).trim() : '',
+      address: address ? String(address).trim() : '',
+      createdAt: new Date().toISOString()
+    };
+
+    await dbQuery(
+      `
+      INSERT INTO users (
+        id,
+        tenant_id,
         name,
         email,
-        password,
-        phone,
-        address
-      } = req.body;
+        password_hash,
+        data
+      )
+      VALUES ($1, $2, $3, $4, $5, $6::jsonb)
+      `,
+      [
+        user.id,
+        req.tenantId,
+        user.name,
+        user.email,
+        hashedPassword,
+        JSON.stringify(user)
+      ]
+    );
 
-      if (
-        !name ||
-        !email ||
-        !password ||
-        !phone ||
-        !address
-      ) {
-        return res.status(400).json({
-          error:
-            'جميع الحقول مطلوبة'
-        });
+    const token = jwt.sign(
+      {
+        userId: user.id,
+        tenantId: req.tenantId,
+        email: user.email
+      },
+      JWT_SECRET,
+      {
+        expiresIn: '30d'
       }
+    );
 
-      const normalizedEmail =
-        String(email)
-          .trim()
-          .toLowerCase();
+    return res.status(201).json({
+      success: true,
+      token,
+      user
+    });
 
-      const existing =
-        await dbQuery(
-          `
-            SELECT id
-            FROM users
-            WHERE email = $1
-              AND tenant_id = $2
-          `,
-          [
-            normalizedEmail,
-            req.tenantId
-          ]
-        );
+  } catch (error) {
+    console.error('Register error:', error);
 
-      if (
-        existing.rows[0]
-      ) {
-        return res.status(400).json({
-          error:
-            'البريد الإلكتروني مستخدم بالفعل'
-        });
-      }
+    return res.status(500).json({
+      success: false,
+      error: 'Registration failed'
+    });
+  }
+});
 
-      const hashedPassword =
-        await bcrypt.hash(
-          password,
-          10
-        );
 
-      const newUser = {
-        id:
-          uuidv4(),
+// ------------------------------------------------------------
+// CUSTOMER LOGIN
+// ------------------------------------------------------------
 
-        name,
+app.post('/api/auth/login', tenantMiddleware, async (req, res) => {
+  try {
+    const {
+      email,
+      password
+    } = req.body || {};
 
-        email:
-          normalizedEmail,
-
-        password:
-          hashedPassword,
-
-        phone,
-
-        address,
-
-        createdAt:
-          new Date()
-            .toISOString()
-      };
-
-      await dbQuery(
-        `
-          INSERT INTO users (
-            id,
-            email,
-            data,
-            tenant_id
-          )
-          VALUES (
-            $1,
-            $2,
-            $3,
-            $4
-          )
-        `,
-        [
-          newUser.id,
-          newUser.email,
-          newUser,
-          req.tenantId
-        ]
-      );
-
-      res.status(201).json({
-        success: true,
-
-        token:
-          generateToken(
-            newUser.id,
-            req.tenantId
-          ),
-
-        user: {
-          id:
-            newUser.id,
-
-          name:
-            newUser.name,
-
-          email:
-            newUser.email,
-
-          phone:
-            newUser.phone,
-
-          address:
-            newUser.address
-        }
-      });
-    } catch (error) {
-      console.error(
-        error
-      );
-
-      res.status(500).json({
-        error:
-          'Database error'
+    if (!email || !password) {
+      return res.status(400).json({
+        success: false,
+        error: 'Email and password are required'
       });
     }
-  }
-);
 
-// ============================================================
-// LOGIN
-// ============================================================
+    const normalizedEmail = String(email).trim().toLowerCase();
 
-app.post(
-  '/api/auth/login',
-  tenantMiddleware,
-  async (
-    req,
-    res
-  ) => {
-    try {
-      const {
-        email,
-        password
-      } = req.body;
+    const result = await dbQuery(
+      `
+      SELECT *
+      FROM users
+      WHERE tenant_id = $1
+        AND LOWER(email) = LOWER($2)
+      LIMIT 1
+      `,
+      [req.tenantId, normalizedEmail]
+    );
 
-      if (
-        !email ||
-        !password
-      ) {
-        return res.status(400).json({
-          error:
-            'البريد الإلكتروني وكلمة المرور مطلوبان'
-        });
-      }
-
-      const normalizedEmail =
-        String(email)
-          .trim()
-          .toLowerCase();
-
-      const {
-        rows
-      } = await dbQuery(
-        `
-          SELECT data
-          FROM users
-          WHERE email = $1
-            AND tenant_id = $2
-        `,
-        [
-          normalizedEmail,
-          req.tenantId
-        ]
-      );
-
-      const user =
-        rows[0]?.data;
-
-      if (!user) {
-        return res.status(401).json({
-          error:
-            'البريد الإلكتروني غير صحيح'
-        });
-      }
-
-      const valid =
-        await bcrypt.compare(
-          password,
-          user.password
-        );
-
-      if (!valid) {
-        return res.status(401).json({
-          error:
-            'كلمة المرور غير صحيحة'
-        });
-      }
-
-      res.json({
-        success: true,
-
-        token:
-          generateToken(
-            user.id,
-            req.tenantId
-          ),
-
-        user: {
-          id:
-            user.id,
-
-          name:
-            user.name,
-
-          email:
-            user.email,
-
-          phone:
-            user.phone,
-
-          address:
-            user.address
-        }
-      });
-    } catch (error) {
-      console.error(
-        error
-      );
-
-      res.status(500).json({
-        error:
-          'Database error'
+    if (result.rows.length === 0) {
+      return res.status(401).json({
+        success: false,
+        error: 'Invalid email or password'
       });
     }
+
+    const row = result.rows[0];
+
+    const validPassword = await bcrypt.compare(
+      String(password),
+      row.password_hash || ''
+    );
+
+    if (!validPassword) {
+      return res.status(401).json({
+        success: false,
+        error: 'Invalid email or password'
+      });
+    }
+
+    const userData =
+      row.data && typeof row.data === 'object'
+        ? row.data
+        : {};
+
+    const user = {
+      ...userData,
+      id: row.id,
+      name: row.name || userData.name || '',
+      email: row.email || userData.email || ''
+    };
+
+    const token = jwt.sign(
+      {
+        userId: row.id,
+        tenantId: req.tenantId,
+        email: row.email
+      },
+      JWT_SECRET,
+      {
+        expiresIn: '30d'
+      }
+    );
+
+    return res.json({
+      success: true,
+      token,
+      user
+    });
+
+  } catch (error) {
+    console.error('Login error:', error);
+
+    return res.status(500).json({
+      success: false,
+      error: 'Login failed'
+    });
   }
-);
-// ============================================================
-// CURRENT USER
-// ============================================================
+});
+
+
+// ------------------------------------------------------------
+// CURRENT CUSTOMER
+// ------------------------------------------------------------
 
 app.get(
   '/api/auth/me',
   tenantMiddleware,
-  authenticateUser,
-  async (
-    req,
-    res
-  ) => {
+  requireUser,
+  async (req, res) => {
     try {
-      const {
-        rows
-      } = await dbQuery(
+      const result = await dbQuery(
         `
-          SELECT data
-          FROM users
-          WHERE id = $1
-            AND tenant_id = $2
+        SELECT *
+        FROM users
+        WHERE id = $1
+          AND tenant_id = $2
+        LIMIT 1
         `,
-        [
-          req.userId,
-          req.tenantId
-        ]
+        [req.userId, req.tenantId]
       );
 
-      const user =
-        rows[0]?.data;
-
-      if (!user) {
+      if (result.rows.length === 0) {
         return res.status(404).json({
-          error:
-            'User not found'
+          success: false,
+          error: 'User not found'
         });
       }
 
-      res.json({
-        id:
-          user.id,
+      const row = result.rows[0];
 
-        name:
-          user.name,
+      const userData =
+        row.data && typeof row.data === 'object'
+          ? row.data
+          : {};
 
-        email:
-          user.email,
-
-        phone:
-          user.phone,
-
-        address:
-          user.address
+      return res.json({
+        success: true,
+        user: {
+          ...userData,
+          id: row.id,
+          name: row.name || userData.name || '',
+          email: row.email || userData.email || ''
+        }
       });
-    } catch (error) {
-      console.error(
-        error
-      );
 
-      res.status(500).json({
-        error:
-          'Database error'
+    } catch (error) {
+      console.error('Get current user error:', error);
+
+      return res.status(500).json({
+        success: false,
+        error: 'Failed to load user'
       });
     }
   }
 );
 
-// ============================================================
-// UPDATE CURRENT USER
-// ============================================================
+
+// ------------------------------------------------------------
+// UPDATE CUSTOMER
+// ------------------------------------------------------------
 
 app.put(
   '/api/auth/me',
   tenantMiddleware,
-  authenticateUser,
-  async (
-    req,
-    res
-  ) => {
+  requireUser,
+  async (req, res) => {
     try {
-      const {
-        rows
-      } = await dbQuery(
-        `
-          SELECT data
-          FROM users
-          WHERE id = $1
-            AND tenant_id = $2
-        `,
-        [
-          req.userId,
-          req.tenantId
-        ]
-      );
-
-      if (!rows[0]) {
-        return res.status(404).json({
-          error:
-            'User not found'
-        });
-      }
-
-      const user =
-        rows[0].data;
-
       const {
         name,
         phone,
-        address,
-        password
-      } = req.body;
+        address
+      } = req.body || {};
 
-      if (name) {
-        user.name =
-          name;
+      const current = await dbQuery(
+        `
+        SELECT *
+        FROM users
+        WHERE id = $1
+          AND tenant_id = $2
+        LIMIT 1
+        `,
+        [req.userId, req.tenantId]
+      );
+
+      if (current.rows.length === 0) {
+        return res.status(404).json({
+          success: false,
+          error: 'User not found'
+        });
       }
 
-      if (phone) {
-        user.phone =
-          phone;
-      }
+      const row = current.rows[0];
 
-      if (address) {
-        user.address =
-          address;
-      }
+      const oldData =
+        row.data && typeof row.data === 'object'
+          ? row.data
+          : {};
 
-      if (password) {
-        user.password =
-          await bcrypt.hash(
-            password,
-            10
-          );
-      }
+      const updatedData = {
+        ...oldData,
+        id: row.id,
+        name:
+          name !== undefined
+            ? String(name).trim()
+            : oldData.name || row.name || '',
+        email: row.email,
+        phone:
+          phone !== undefined
+            ? String(phone).trim()
+            : oldData.phone || '',
+        address:
+          address !== undefined
+            ? String(address).trim()
+            : oldData.address || ''
+      };
 
       await dbQuery(
         `
-          UPDATE users
-          SET
-            data = $1,
-            updated_at = NOW()
-          WHERE id = $2
-            AND tenant_id = $3
+        UPDATE users
+        SET
+          name = $1,
+          data = $2::jsonb
+        WHERE id = $3
+          AND tenant_id = $4
         `,
         [
-          user,
+          updatedData.name,
+          JSON.stringify(updatedData),
           req.userId,
           req.tenantId
         ]
       );
 
-      res.json({
+      return res.json({
         success: true,
-
-        user: {
-          id:
-            user.id,
-
-          name:
-            user.name,
-
-          email:
-            user.email,
-
-          phone:
-            user.phone,
-
-          address:
-            user.address
-        }
+        user: updatedData
       });
-    } catch (error) {
-      console.error(
-        error
-      );
 
-      res.status(500).json({
-        error:
-          'Database error'
+    } catch (error) {
+      console.error('Update user error:', error);
+
+      return res.status(500).json({
+        success: false,
+        error: 'Failed to update user'
       });
     }
   }
 );
 
+
 // ============================================================
+// STORE APIs
+// ============================================================
+
+
+// ------------------------------------------------------------
 // STORE PRODUCTS
-// ============================================================
+// ------------------------------------------------------------
 
 app.get(
   '/api/store/products',
   tenantMiddleware,
-  async (
-    req,
-    res
-  ) => {
+  async (req, res) => {
     try {
-      const products =
-        await getProducts(
-          req.tenantId
-        );
-
-      res.json(
-        products.map(
-          product => ({
-            id:
-              product.id,
-
-            name:
-              product.name,
-
-            price:
-              product.price,
-
-            description:
-              product.description,
-
-            images:
-              product.images,
-
-            quantity:
-              product.quantity > 10
-                ? null
-                : product.quantity
-          })
-        )
+      const result = await dbQuery(
+        `
+        SELECT
+          id,
+          data
+        FROM products
+        WHERE tenant_id = $1
+        ORDER BY created_at DESC
+        `,
+        [req.tenantId]
       );
+
+      const products = result.rows.map(row => {
+        const data =
+          row.data && typeof row.data === 'object'
+            ? row.data
+            : {};
+
+        return {
+          ...data,
+          id: row.id
+        };
+      });
+
+      return res.json({
+        success: true,
+        products
+      });
+
     } catch (error) {
-      console.error(
-        error
-      );
+      console.error('Store products error:', error);
 
-      res.status(500).json({
-        error:
-          'Database error'
+      return res.status(500).json({
+        success: false,
+        error: 'Failed to load products'
       });
     }
   }
 );
 
-// ============================================================
+
+// ------------------------------------------------------------
 // STORE BRAND
-// ============================================================
+// ------------------------------------------------------------
 
 app.get(
   '/api/store/brand',
   tenantMiddleware,
-  async (
-    req,
-    res
-  ) => {
+  async (req, res) => {
     try {
-      const brand =
-        await getBrand(
-          req.tenantId
-        );
+      const brand = await getBrand(req.tenantId);
 
-      if (!brand) {
-        return res.json(
-          null
-        );
-      }
-
-      res.json({
-        name:
-          brand.name,
-
-        logo:
-          brand.logo,
-
-        phone:
-          brand.phone,
-
-        email:
-          brand.email,
-
-        instagram:
-          brand.instagram,
-
-        tiktok:
-          brand.tiktok,
-
-        whatsapp:
-          brand.whatsapp,
-
-        facebook:
-          brand.facebook
+      return res.json({
+        success: true,
+        brand: {
+          ...brand,
+          deliveryFee: Math.max(
+            0,
+            Number(brand?.deliveryFee) || 0
+          )
+        }
       });
-    } catch (error) {
-      console.error(
-        error
-      );
 
-      res.status(500).json({
-        error:
-          'Database error'
+    } catch (error) {
+      console.error('Store brand error:', error);
+
+      return res.status(500).json({
+        success: false,
+        error: 'Failed to load brand'
       });
     }
   }
 );
 
+
 // ============================================================
-// STORE ORDERS
+// CREATE AUTHENTICATED ORDER
 // ============================================================
 
 app.post(
   '/api/store/orders',
   tenantMiddleware,
-  authenticateUser,
-  async (
-    req,
-    res
-  ) => {
+  requireUser,
+  async (req, res) => {
     try {
+      const body = req.body || {};
+
+      const items = Array.isArray(body.items)
+        ? body.items
+        : [];
+
+      if (items.length === 0) {
+        return res.status(400).json({
+          success: false,
+          error: 'Order must contain at least one item'
+        });
+      }
+
+      // قراءة سعر التوصيل من بيانات المتجر
+      const brand = await getBrand(req.tenantId);
+
+      const deliveryFee = Math.max(
+        0,
+        Number(brand?.deliveryFee) || 0
+      );
+
+      // حساب الإجمالي من السيرفر
+      const subtotal = items.reduce(
+        (sum, item) => {
+          const price = Number(item.price) || 0;
+          const quantity = Number(item.quantity) || 0;
+
+          return sum + (price * quantity);
+        },
+        0
+      );
+
+      const totalPrice =
+        subtotal + deliveryFee;
+
       const order = {
-        ...req.body,
+        ...body,
 
-        userId:
-          req.userId,
+        id: uuidv4(),
 
-        id:
-          uuidv4(),
+        items,
 
-        createdAt:
-          new Date()
-            .toISOString(),
+        subtotal,
 
-        status:
-          'new'
+        deliveryFee,
+
+        totalPrice,
+
+        userId: req.userId,
+
+        tenantId: req.tenantId,
+
+        createdAt: new Date().toISOString(),
+
+        status: 'new'
       };
 
       await dbQuery(
         `
-          INSERT INTO orders (
-            id,
-            user_id,
-            data,
-            tenant_id
-          )
-          VALUES (
-            $1,
-            $2,
-            $3,
-            $4
-          )
+        INSERT INTO orders (
+          id,
+          tenant_id,
+          user_id,
+          data
+        )
+        VALUES ($1, $2, $3, $4::jsonb)
         `,
         [
           order.id,
-          order.userId,
-          order,
-          req.tenantId
+          req.tenantId,
+          req.userId,
+          JSON.stringify(order)
         ]
       );
 
-      res.json({
+      return res.status(201).json({
         success: true,
         order
       });
-    } catch (error) {
-      console.error(
-        error
-      );
 
-      res.status(500).json({
-        error:
-          'Database error'
+    } catch (error) {
+      console.error('Create order error:', error);
+
+      return res.status(500).json({
+        success: false,
+        error: 'Failed to create order'
       });
     }
   }
 );
 
+
 // ============================================================
-// GUEST ORDERS
+// CREATE GUEST ORDER
 // ============================================================
 
 app.post(
   '/api/store/orders/guest',
   tenantMiddleware,
-  async (
-    req,
-    res
-  ) => {
+  async (req, res) => {
     try {
+      const body = req.body || {};
+
+      const items = Array.isArray(body.items)
+        ? body.items
+        : [];
+
+      if (items.length === 0) {
+        return res.status(400).json({
+          success: false,
+          error: 'Order must contain at least one item'
+        });
+      }
+
+      const brand = await getBrand(req.tenantId);
+
+      const deliveryFee = Math.max(
+        0,
+        Number(brand?.deliveryFee) || 0
+      );
+
+      const subtotal = items.reduce(
+        (sum, item) => {
+          const price = Number(item.price) || 0;
+          const quantity = Number(item.quantity) || 0;
+
+          return sum + (price * quantity);
+        },
+        0
+      );
+
+      const totalPrice =
+        subtotal + deliveryFee;
+
       const order = {
-        ...req.body,
+        ...body,
 
-        userId:
-          null,
+        id: uuidv4(),
 
-        id:
-          uuidv4(),
+        items,
 
-        createdAt:
-          new Date()
-            .toISOString(),
+        subtotal,
 
-        status:
-          'new'
+        deliveryFee,
+
+        totalPrice,
+
+        userId: null,
+
+        tenantId: req.tenantId,
+
+        createdAt: new Date().toISOString(),
+
+        status: 'new'
       };
 
       await dbQuery(
         `
-          INSERT INTO orders (
-            id,
-            user_id,
-            data,
-            tenant_id
-          )
-          VALUES (
-            $1,
-            $2,
-            $3,
-            $4
-          )
+        INSERT INTO orders (
+          id,
+          tenant_id,
+          user_id,
+          data
+        )
+        VALUES ($1, $2, NULL, $3::jsonb)
         `,
         [
           order.id,
-          null,
-          order,
-          req.tenantId
+          req.tenantId,
+          JSON.stringify(order)
         ]
       );
 
-      res.json({
+      return res.status(201).json({
         success: true,
         order
       });
-    } catch (error) {
-      console.error(
-        error
-      );
 
-      res.status(500).json({
-        error:
-          'Database error'
+    } catch (error) {
+      console.error('Guest order error:', error);
+
+      return res.status(500).json({
+        success: false,
+        error: 'Failed to create order'
       });
     }
   }
 );
 
+
 // ============================================================
-// ROOT
+// CUSTOMER ORDERS
 // ============================================================
 
 app.get(
-  '/',
+  '/api/store/orders',
   tenantMiddleware,
-  (
-    req,
-    res
-  ) => {
-    const host =
-      req.headers.host ||
-      '';
-
-    const siteMode =
-      req.headers[
-        'x-site-mode'
-      ] || '';
-
-    if (
-      siteMode === 'admin' ||
-      host.includes('admin')
-    ) {
-      return res.sendFile(
-        path.join(
-          __dirname,
-          'public',
-          'admin.html'
-        )
+  requireUser,
+  async (req, res) => {
+    try {
+      const result = await dbQuery(
+        `
+        SELECT
+          id,
+          data
+        FROM orders
+        WHERE tenant_id = $1
+          AND user_id = $2
+        ORDER BY created_at DESC
+        `,
+        [
+          req.tenantId,
+          req.userId
+        ]
       );
-    }
 
-    res.sendFile(
-      path.join(
-        __dirname,
-        'public',
-        'store.html'
-      )
-    );
+      const orders = result.rows.map(row => {
+        const data =
+          row.data && typeof row.data === 'object'
+            ? row.data
+            : {};
+
+        return {
+          ...data,
+          id: row.id
+        };
+      });
+
+      return res.json({
+        success: true,
+        orders
+      });
+
+    } catch (error) {
+      console.error('Customer orders error:', error);
+
+      return res.status(500).json({
+        success: false,
+        error: 'Failed to load orders'
+      });
+    }
   }
 );
 
+
 // ============================================================
-// START
+// ROOT PAGE
 // ============================================================
 
-async function start() {
-  await testDatabaseConnection();
+app.get('/', (req, res) => {
+  const host = req.headers.host || '';
 
-  app.listen(
-    PORT,
-    () => {
-      console.log(
-        `✅ Server running on port ${PORT}`
-      );
-    }
+  const siteMode =
+    req.headers['x-site-mode'] || '';
+
+  if (
+    siteMode === 'admin' ||
+    host.includes('admin')
+  ) {
+    return res.sendFile(
+      path.join(
+        __dirname,
+        'public',
+        'admin.html'
+      )
+    );
+  }
+
+  return res.sendFile(
+    path.join(
+      __dirname,
+      'public',
+      'store.html'
+    )
   );
+});
+
+
+// ============================================================
+// 404 HANDLER
+// ============================================================
+
+app.use((req, res) => {
+  res.status(404).json({
+    success: false,
+    error: 'Route not found'
+  });
+});
+
+
+// ============================================================
+// ERROR HANDLER
+// ============================================================
+
+app.use((err, req, res, next) => {
+  console.error('Unhandled server error:', err);
+
+  if (res.headersSent) {
+    return next(err);
+  }
+
+  return res.status(500).json({
+    success: false,
+    error: 'Internal server error'
+  });
+});
+
+
+// ============================================================
+// START SERVER
+// ============================================================
+
+const PORT = process.env.PORT || 3000;
+
+async function startServer() {
+  try {
+    await testDatabaseConnection();
+
+    app.listen(PORT, '0.0.0.0', () => {
+      console.log(
+        `Server running on port ${PORT}`
+      );
+    });
+
+  } catch (error) {
+    console.error(
+      'Failed to start server:',
+      error
+    );
+
+    process.exit(1);
+  }
 }
 
-start();
+startServer();
+
+
+// ============================================================
+// EXPORT
+// ============================================================
 
 module.exports = app;
