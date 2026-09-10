@@ -1425,6 +1425,60 @@ app.post(
 );
 
 // ============================================================
+// ADMIN - DELETE PRODUCT
+// ============================================================
+
+app.delete(
+  '/api/admin/products/:id',
+  tenantMiddleware,
+  requireAdmin,
+  async (req, res) => {
+    try {
+      const productId = String(req.params.id || '').trim();
+
+      if (!productId) {
+        return res.status(400).json({
+          success: false,
+          error: 'Product ID is required'
+        });
+      }
+
+      // مهم جداً:
+      // الحذف يكون للمنتج التابع لنفس الـ tenant فقط
+      const result = await dbQuery(
+        `
+        DELETE FROM products
+        WHERE id = $1
+          AND tenant_id = $2
+        `,
+        [productId, req.tenantId]
+      );
+
+      if (result.rowCount === 0) {
+        return res.status(404).json({
+          success: false,
+          error: 'Product not found'
+        });
+      }
+
+      return res.json({
+        success: true,
+        message: 'Product deleted successfully',
+        id: productId
+      });
+
+    } catch (error) {
+      console.error('Delete product error:', error);
+
+      return res.status(500).json({
+        success: false,
+        error: 'Database error'
+      });
+    }
+  }
+);
+
+// ============================================================
 // ADMIN ORDERS
 // ============================================================
 
