@@ -72,6 +72,7 @@ button{border:0;border-radius:12px;padding:11px 17px;background:linear-gradient(
           <div class="form-group"><label data-i18n="phone">رقم الهاتف *</label><input type="tel" id="brandPhone"></div>
           <div class="form-group"><label data-i18n="email">البريد الإلكتروني</label><input type="email" id="brandEmail"></div>
           <div class="form-group"><label data-i18n="account_name">اسم الحساب</label><input type="text" id="brandAccountName"></div>
+          <div class="form-group"><label>🚚 سعر التوصيل (جنيه)</label><input type="number" id="deliveryFee" min="0" step="1" placeholder="مثال: 50"></div>
         </div>
         <div class="form-section">
           <h3 data-i18n="social">وسائل التواصل</h3>
@@ -271,6 +272,7 @@ button{border:0;border-radius:12px;padding:11px 17px;background:linear-gradient(
         document.getElementById('brandPhone').value = brand.phone || '';
         document.getElementById('brandEmail').value = brand.email || '';
         document.getElementById('brandAccountName').value = brand.accountName || '';
+        document.getElementById('deliveryFee').value = Number(brand.deliveryFee) || 0;
         document.getElementById('brandWhatsapp').value = brand.whatsapp || '';
         document.getElementById('brandFacebook').value = brand.facebook || '';
         document.getElementById('brandInstagram').value = brand.instagram || '';
@@ -289,6 +291,7 @@ button{border:0;border-radius:12px;padding:11px 17px;background:linear-gradient(
           phone: document.getElementById('brandPhone').value.trim(),
           email: document.getElementById('brandEmail').value.trim(),
           accountName: document.getElementById('brandAccountName').value.trim(),
+          deliveryFee: Math.max(0, Number(document.getElementById('deliveryFee').value) || 0),
           logo,
           whatsapp: document.getElementById('brandWhatsapp').value.trim(),
           facebook: document.getElementById('brandFacebook').value.trim(),
