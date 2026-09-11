@@ -28,9 +28,31 @@ button{border:0;border-radius:12px;padding:11px 17px;background:linear-gradient(
 
   
 .delivery-row{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:11px 12px;border:1px solid var(--line);border-radius:12px;background:var(--surface2)}.delivery-row>span{font-size:13px;font-weight:800}.delivery-input-wrap{display:flex;align-items:center;gap:6px;min-width:125px}.delivery-input-wrap input{padding:9px 10px}.delivery-input-wrap span{font-size:11px;color:var(--muted);font-weight:800;white-space:nowrap}
+
+.admin-login-overlay{position:fixed;inset:0;z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px;background:radial-gradient(circle at top,#30276f 0,#101526 48%,#070b14 100%);transition:.25s}.admin-login-overlay.hidden{opacity:0;visibility:hidden;pointer-events:none}.admin-login-card{width:min(440px,100%);padding:34px;border:1px solid rgba(255,255,255,.12);border-radius:26px;background:rgba(18,26,43,.92);color:#fff;box-shadow:0 30px 100px rgba(0,0,0,.4);backdrop-filter:blur(20px)}.admin-login-icon{width:62px;height:62px;border-radius:18px;display:grid;place-items:center;background:linear-gradient(135deg,#8b7cff,#5848e8);font-size:28px;margin-bottom:18px;box-shadow:0 12px 28px rgba(109,93,252,.28)}.admin-login-kicker{font-size:12px;color:#aeb8ca;font-weight:800;margin-bottom:7px}.admin-login-card h2{font-size:27px;margin-bottom:8px}.admin-login-card p{font-size:13px;line-height:1.8;color:#aeb8ca;margin-bottom:24px}.admin-login-card label{color:#fff!important}.password-wrap{position:relative}.password-wrap input{padding-left:52px!important;background:#0e1525!important;color:#fff!important;border-color:#2b3850!important}.show-password{position:absolute;left:7px;top:7px;width:38px;height:38px;padding:0!important;background:transparent!important;color:#9aa7bb!important;box-shadow:none!important}.admin-login-error{min-height:22px;margin:9px 0;color:#fca5a5;font-size:12px;font-weight:700}.admin-login-submit{width:100%;padding:13px 16px!important;border-radius:13px!important}.admin-login-submit:disabled{opacity:.6;cursor:wait}.order-status{display:inline-flex;padding:5px 10px;border-radius:999px;font-size:11px;font-weight:900;background:#eef2ff;color:#4338ca}.order-status.cancelled{background:#fff1f2;color:#b91c1c}.order-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px}.product-images-preview{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}.product-images-preview .image-preview{position:relative;width:78px;height:78px}.product-images-preview img{width:100%;height:100%;object-fit:cover;border-radius:10px;border:1px solid var(--line)}.image-remove{position:absolute!important;top:-6px;right:-6px;width:22px;height:22px;padding:0!important;border-radius:50%!important;background:#dc2626!important;color:#fff!important;font-size:11px!important;box-shadow:none!important}
 </style>
 </head>
 <body>
+
+  <!-- Modern Admin Login -->
+  <div id="adminLoginOverlay" class="admin-login-overlay">
+    <div class="admin-login-card">
+      <div class="admin-login-icon">⚙️</div>
+      <div class="admin-login-kicker">لوحة تحكم المتجر</div>
+      <h2>مرحبًا بك 👋</h2>
+      <p>سجّل الدخول لإدارة المنتجات والطلبات وإعدادات المتجر.</p>
+      <form id="adminLoginForm" onsubmit="submitAdminLogin(event)">
+        <label for="adminPasswordInput">كلمة مرور المدير</label>
+        <div class="password-wrap">
+          <input id="adminPasswordInput" type="password" autocomplete="current-password" placeholder="أدخل كلمة المرور" required>
+          <button type="button" class="show-password" onclick="toggleAdminPassword()">👁️</button>
+        </div>
+        <div id="adminLoginError" class="admin-login-error"></div>
+        <button class="admin-login-submit" id="adminLoginSubmit" type="submit">دخول إلى لوحة التحكم</button>
+      </form>
+    </div>
+  </div>
+
   <header>
     <h1 data-i18n="admin_dashboard">⚙️ لوحة التحكم</h1>
     <div class="header-right">
@@ -142,8 +164,11 @@ button{border:0;border-radius:12px;padding:11px 17px;background:linear-gradient(
           <div class="form-group"><label data-i18n="price">السعر *</label><input type="number" id="productPrice" min="0" step="0.01"></div>
           <div class="form-group"><label data-i18n="qty">الكمية *</label><input type="number" id="productQuantity" min="0"></div>
           <div class="form-group"><label data-i18n="description">الوصف</label><textarea id="productDescription"></textarea></div>
-          <div class="form-group"><label data-i18n="image_url">رابط الصورة</label><input type="text" id="productImage"></div>
-          <div class="form-group"><label data-i18n="upload_image">أو رفع صورة جديدة</label><input type="file" id="productImageFile" accept="image/*"></div>
+          <div class="form-group"><label>روابط الصور (رابط في كل سطر)</label><textarea id="productImagesUrls" placeholder="https://example.com/image-1.jpg
+https://example.com/image-2.jpg"></textarea></div>
+          <div class="form-group"><label>أو ارفع حتى 10 صور للمنتج</label><input type="file" id="productImageFiles" accept="image/*" multiple>
+            <div id="productImagesPreview" class="product-images-preview"></div>
+          </div>
           <div style="display:flex;gap:12px;">
             <button id="productSaveButton" onclick="saveProduct()" data-i18n="save_product">✅ إضافة المنتج</button>
             <button class="secondary" onclick="cancelProductEdit()" data-i18n="cancel">إلغاء</button>
@@ -234,37 +259,67 @@ button{border:0;border-radius:12px;padding:11px 17px;background:linear-gradient(
       options.headers = { ...authHeaders(options.body && typeof options.body === 'string'), ...(options.headers || {}) };
       const res = await fetch(url, options);
       if (res.status === 401) {
-        alert('انتهت الجلسة، يرجى تسجيل الدخول مجدداً');
+        adminToken = '';
         sessionStorage.removeItem('estore_admin_token');
-        location.reload();
-        throw new Error('Unauthorized');
+        showAdminLogin();
+        throw new Error('انتهت الجلسة، يرجى تسجيل الدخول مجدداً');
       }
       return res;
     }
 
-    // Login (if not logged in, show login overlay)
-    // We'll keep it simple: if no token, prompt for password.
+    // ===== Modern Admin Login =====
     async function ensureAdmin() {
-      if (!adminToken) {
-        const pwd = prompt('أدخل كلمة مرور المدير:');
-        if (!pwd) return false;
-        try {
-          const res = await fetch(`${API_BASE}/admin/login`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ password: pwd })
-          });
-          const data = await res.json();
-          if (!res.ok) throw new Error(data.error || 'خطأ');
-          adminToken = data.token;
-          sessionStorage.setItem('estore_admin_token', adminToken);
-          return true;
-        } catch (e) {
-          alert('فشل تسجيل الدخول: ' + e.message);
-          return false;
-        }
+      if (adminToken) {
+        hideAdminLogin();
+        return true;
       }
-      return true;
+      showAdminLogin();
+      return false;
+    }
+
+    function showAdminLogin() {
+      document.getElementById('adminLoginOverlay')?.classList.remove('hidden');
+      setTimeout(() => document.getElementById('adminPasswordInput')?.focus(), 80);
+    }
+
+    function hideAdminLogin() {
+      document.getElementById('adminLoginOverlay')?.classList.add('hidden');
+    }
+
+    function toggleAdminPassword() {
+      const input = document.getElementById('adminPasswordInput');
+      input.type = input.type === 'password' ? 'text' : 'password';
+    }
+
+    async function submitAdminLogin(event) {
+      event.preventDefault();
+      const input = document.getElementById('adminPasswordInput');
+      const error = document.getElementById('adminLoginError');
+      const button = document.getElementById('adminLoginSubmit');
+      const pwd = input.value.trim();
+      error.textContent = '';
+      if (!pwd) { error.textContent = 'اكتب كلمة المرور أولاً'; return; }
+      button.disabled = true;
+      button.textContent = 'جاري تسجيل الدخول...';
+      try {
+        const res = await fetch(`${API_BASE}/admin/login`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ password: pwd })
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error(data.error || 'فشل تسجيل الدخول');
+        adminToken = data.token;
+        sessionStorage.setItem('estore_admin_token', adminToken);
+        input.value = '';
+        hideAdminLogin();
+        await initAdminData();
+      } catch (e) {
+        error.textContent = e.message;
+      } finally {
+        button.disabled = false;
+        button.textContent = 'دخول إلى لوحة التحكم';
+      }
     }
 
     async function logoutAdmin() {
@@ -288,14 +343,20 @@ button{border:0;border-radius:12px;padding:11px 17px;background:linear-gradient(
     }
 
     // ===== Upload image =====
-    async function uploadImage(file) {
-      if (!file) return null;
+    async function uploadImages(files) {
+      const list = Array.from(files || []).filter(Boolean).slice(0, 10);
+      if (!list.length) return [];
       const form = new FormData();
-      form.append('image', file);
-      const res = await apiFetch(`${API_BASE}/admin/upload`, {method:'POST', body:form});
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'فشل رفع الصورة');
-      return data.url;
+      list.forEach(file => form.append('images', file));
+      const res = await apiFetch(`${API_BASE}/admin/upload-multiple`, {method:'POST', body:form});
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || 'فشل رفع الصور');
+      return Array.isArray(data.urls) ? data.urls : [];
+    }
+
+    function getProductUrlImages() {
+      return document.getElementById('productImagesUrls').value
+        .split(/\n+/).map(v => v.trim()).filter(Boolean).slice(0, 10);
     }
 
     // ===== Brand =====
@@ -379,6 +440,8 @@ button{border:0;border-radius:12px;padding:11px 17px;background:linear-gradient(
 
     // ===== Products =====
     let productsCache = [];
+    let editingProductImages = [];
+
     async function loadProducts() {
       try {
         const res = await apiFetch(`${API_BASE}/admin/products`);
@@ -386,52 +449,86 @@ button{border:0;border-radius:12px;padding:11px 17px;background:linear-gradient(
         let html = '';
         productsCache.forEach(p => {
           const qtyClass = p.quantity < 10 ? 'low' : 'high';
-          const img = p.images?.[0] || '';
-          html += `<div class="card"><img src="${img}" class="product-image" onerror="this.style.display='none'"><h3>${p.name}</h3><p><strong data-i18n="price">السعر:</strong> ${p.price} ج</p><p><strong data-i18n="qty">الكمية:</strong> <span class="quantity-badge ${qtyClass}">${p.quantity}</span></p>${p.description?`<p><strong data-i18n="description">الوصف:</strong> ${p.description}</p>`:''}<div class="card-buttons"><button class="secondary" onclick="editProduct('${p.id}')" data-i18n="edit">✏️ تعديل</button><button class="danger" onclick="deleteProduct('${p.id}')" data-i18n="delete">🗑️ حذف</button></div></div>`;
+          const images = Array.isArray(p.images) ? p.images : [];
+          const img = images[0] || '';
+          html += `<div class="card">
+            ${img ? `<img src="${img}" class="product-image" loading="lazy" onerror="this.style.display='none'">` : ''}
+            <h3>${escapeHtml(p.name)}</h3>
+            <p><strong>السعر:</strong> ${Number(p.price)||0} ج</p>
+            <p><strong>الكمية:</strong> <span class="quantity-badge ${qtyClass}">${p.quantity}</span></p>
+            <p><strong>الصور:</strong> ${images.length}</p>
+            ${p.description ? `<p><strong>الوصف:</strong> ${escapeHtml(p.description)}</p>` : ''}
+            <div class="card-buttons"><button class="secondary" onclick="editProduct('${p.id}')">✏️ تعديل</button><button class="danger" onclick="deleteProduct('${p.id}')">🗑️ حذف</button></div>
+          </div>`;
         });
-        document.getElementById('productsList').innerHTML = html || '<p style="text-align:center;grid-column:1/-1;color:var(--text-secondary);" data-i18n="no_products">لا توجد منتجات</p>';
-        applyTranslations(); // re-apply after dynamic content
+        document.getElementById('productsList').innerHTML = html || '<p style="text-align:center;grid-column:1/-1;">لا توجد منتجات</p>';
       } catch (err) { console.error(err); }
     }
+
+    function escapeHtml(value) {
+      return String(value ?? '').replace(/[&<>'"]/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','\"':'&quot;'}[ch]));
+    }
+
+    function renderProductImagePreview() {
+      const box = document.getElementById('productImagesPreview');
+      if (!box) return;
+      box.innerHTML = editingProductImages.map((src, index) => `<div class="image-preview"><img src="${src}" loading="lazy"><button type="button" class="image-remove" onclick="removeProductImage(${index})">×</button></div>`).join('');
+    }
+
+    function removeProductImage(index) {
+      editingProductImages.splice(index, 1);
+      renderProductImagePreview();
+    }
+
+    document.getElementById('productImageFiles')?.addEventListener('change', async (event) => {
+      const files = Array.from(event.target.files || []).slice(0, 10);
+      try {
+        const urls = await uploadImages(files);
+        editingProductImages = [...editingProductImages, ...urls].slice(0, 10);
+        renderProductImagePreview();
+        event.target.value = '';
+      } catch (err) { alert('❌ ' + err.message); }
+    });
 
     function toggleProductForm() {
       const form = document.getElementById('productForm');
       form.style.display = form.style.display === 'none' ? 'block' : 'none';
       if (form.style.display === 'none') cancelProductEdit();
     }
+
     function resetProductForm() {
       document.getElementById('editingProductId').value = '';
       document.getElementById('productFormTitle').textContent = translations.add_product || 'إضافة منتج جديد';
       document.getElementById('productSaveButton').textContent = translations.save_product || '✅ إضافة المنتج';
-      ['productName','productPrice','productQuantity','productDescription','productImage'].forEach(id => document.getElementById(id).value = '');
-      document.getElementById('productImageFile').value = '';
+      ['productName','productPrice','productQuantity','productDescription','productImagesUrls'].forEach(id => { const el=document.getElementById(id); if(el) el.value=''; });
+      const files=document.getElementById('productImageFiles'); if(files) files.value='';
+      editingProductImages = [];
+      renderProductImagePreview();
     }
-    function cancelProductEdit() {
-      resetProductForm();
-      document.getElementById('productForm').style.display = 'none';
-    }
+
+    function cancelProductEdit() { resetProductForm(); document.getElementById('productForm').style.display = 'none'; }
 
     async function saveProduct() {
       const id = document.getElementById('editingProductId').value;
       try {
-        let image = document.getElementById('productImage').value.trim();
-        const file = document.getElementById('productImageFile').files[0];
-        if (file) image = await uploadImage(file);
+        const urlImages = getProductUrlImages();
+        const images = [...editingProductImages, ...urlImages].filter(Boolean).slice(0, 10);
         const product = {
           name: document.getElementById('productName').value.trim(),
           price: parseFloat(document.getElementById('productPrice').value),
           quantity: parseInt(document.getElementById('productQuantity').value, 10),
           description: document.getElementById('productDescription').value.trim(),
-          images: image ? [image] : []
+          images
         };
-        if (!product.name || !Number.isFinite(product.price) || product.price < 0 || !Number.isInteger(product.quantity) || product.quantity < 0 || !image) {
-          throw new Error('املأ جميع الحقول بشكل صحيح');
+        if (!product.name || !Number.isFinite(product.price) || product.price < 0 || !Number.isInteger(product.quantity) || product.quantity < 0 || !product.images.length) {
+          throw new Error('املأ اسم المنتج والسعر والكمية وأضف صورة واحدة على الأقل');
         }
         const url = id ? `${API_BASE}/admin/products/${id}` : `${API_BASE}/admin/products`;
         const method = id ? 'PUT' : 'POST';
         const res = await apiFetch(url, {method, headers:authHeaders(true), body:JSON.stringify(product)});
-        if (!res.ok) throw new Error('فشل حفظ المنتج');
-        alert(id ? '✅ تم التعديل' : '✅ تمت الإضافة');
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error(data.error || 'فشل حفظ المنتج');
+        alert(id ? '✅ تم تعديل المنتج' : '✅ تمت إضافة المنتج');
         cancelProductEdit();
         loadProducts();
       } catch (err) { alert('❌ ' + err.message); }
@@ -448,15 +545,18 @@ button{border:0;border-radius:12px;padding:11px 17px;background:linear-gradient(
       document.getElementById('productPrice').value = p.price ?? '';
       document.getElementById('productQuantity').value = p.quantity ?? '';
       document.getElementById('productDescription').value = p.description || '';
-      document.getElementById('productImage').value = p.images?.[0] || '';
-      document.getElementById('productImageFile').value = '';
+      editingProductImages = Array.isArray(p.images) ? [...p.images] : [];
+      document.getElementById('productImagesUrls').value = '';
+      renderProductImagePreview();
       document.getElementById('productForm').scrollIntoView({behavior:'smooth'});
     }
 
     async function deleteProduct(id) {
-      if (!confirm('هل أنت متأكد من الحذف؟')) return;
+      if (!confirm('هل أنت متأكد من حذف المنتج؟')) return;
       try {
-        await apiFetch(`${API_BASE}/admin/products/${id}`, {method:'DELETE'});
+        const res = await apiFetch(`${API_BASE}/admin/products/${id}`, {method:'DELETE'});
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error(data.error || 'فشل الحذف');
         loadProducts();
       } catch (err) { alert('❌ ' + err.message); }
     }
@@ -469,11 +569,32 @@ button{border:0;border-radius:12px;padding:11px 17px;background:linear-gradient(
         let html = '';
         [...orders].reverse().forEach(o => {
           const date = new Date(o.createdAt).toLocaleString('ar-EG');
-          html += `<div class="card"><h3>📋 طلب: ${o.id.substring(0,8)}</h3><p><strong>👤 الاسم:</strong> ${o.customerName}</p><p><strong>📞 الهاتف:</strong> ${o.customerPhone}</p><p><strong>📍 العنوان:</strong> ${o.customerAddress}</p><p><strong>💰 الإجمالي:</strong> ${o.totalPrice} ج</p><p><strong>📅 التاريخ:</strong> ${date}</p><p><strong>📦 المنتجات:</strong></p><ul style="margin-right:16px;color:var(--text-secondary);">${(o.items||[]).map(item => `<li>${item.name} × ${item.quantity} = ${(Number(item.price)||0)*(Number(item.quantity)||0)} ج</li>`).join('')}</ul></div>`;
+          const cancelled = o.status === 'cancelled';
+          html += `<div class="card">
+            <h3>📋 طلب: ${String(o.id||'').substring(0,8)}</h3>
+            <p><strong>👤 الاسم:</strong> ${escapeHtml(o.customerName)}</p>
+            <p><strong>📞 الهاتف:</strong> ${escapeHtml(o.customerPhone)}</p>
+            <p><strong>📍 العنوان:</strong> ${escapeHtml(o.customerAddress)}</p>
+            <p><strong>💰 الإجمالي:</strong> ${Number(o.totalPrice)||0} ج</p>
+            <p><strong>📅 التاريخ:</strong> ${date}</p>
+            <p><strong>الحالة:</strong> <span class="order-status ${cancelled?'cancelled':''}">${cancelled?'ملغي':'جديد'}</span></p>
+            <p><strong>📦 المنتجات:</strong></p><ul style="margin-right:16px;color:var(--muted);">${(o.items||[]).map(item => `<li>${escapeHtml(item.name)} × ${item.quantity}</li>`).join('')}</ul>
+            ${!cancelled ? `<div class="order-actions"><button class="danger" onclick="cancelOrderAdmin('${o.id}')">🚫 إلغاء الطلب</button></div>` : ''}
+          </div>`;
         });
-        document.getElementById('ordersList').innerHTML = html || '<p style="text-align:center;color:var(--text-secondary);" data-i18n="no_orders">لا توجد طلبات</p>';
-        applyTranslations();
+        document.getElementById('ordersList').innerHTML = html || '<p style="text-align:center;">لا توجد طلبات</p>';
       } catch (err) { console.error(err); }
+    }
+
+    async function cancelOrderAdmin(id) {
+      if (!confirm('هل تريد إلغاء هذا الطلب؟')) return;
+      try {
+        const res = await apiFetch(`${API_BASE}/admin/orders/${id}/cancel`, {method:'PATCH'});
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error(data.error || 'فشل إلغاء الطلب');
+        loadOrders();
+        loadStats();
+      } catch (err) { alert('❌ ' + err.message); }
     }
 
     // ===== Users =====
@@ -516,12 +637,23 @@ button{border:0;border-radius:12px;padding:11px 17px;background:linear-gradient(
     }
 
     // ===== Init =====
+    async function initAdminData() {
+      await Promise.all([loadBrand(), loadStats(), loadProducts()]);
+    }
+
     window.addEventListener('load', async () => {
-      const ok = await ensureAdmin();
-      if (ok) {
-        loadBrand();
-        loadStats();
-        loadProducts();
+      if (adminToken) {
+        try {
+          await apiFetch(`${API_BASE}/admin/brand`);
+          hideAdminLogin();
+          await initAdminData();
+        } catch (_) {
+          adminToken = '';
+          sessionStorage.removeItem('estore_admin_token');
+          showAdminLogin();
+        }
+      } else {
+        showAdminLogin();
       }
     });
   </script>

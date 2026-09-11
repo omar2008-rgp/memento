@@ -1383,6 +1383,40 @@ const upload =
       }
   });
 
+
+app.post(
+  '/api/admin/upload-multiple',
+  tenantMiddleware,
+  requireAdmin,
+  upload.array('images', 10),
+  (req, res) => {
+    try {
+      if (!req.files || req.files.length === 0) {
+        return res.status(400).json({
+          success: false,
+          error: 'يرجى اختيار صورة واحدة على الأقل'
+        });
+      }
+
+      const images = req.files.map(file =>
+        `data:${file.mimetype};base64,${file.buffer.toString('base64')}`
+      );
+
+      return res.json({
+        success: true,
+        urls: images
+      });
+    } catch (error) {
+      console.error('Multiple upload error:', error);
+
+      return res.status(500).json({
+        success: false,
+        error: 'فشل رفع الصور'
+      });
+    }
+  }
+);
+
 app.post(
   '/api/admin/upload',
   tenantMiddleware,
@@ -1689,6 +1723,171 @@ app.delete(
 // ============================================================
 // ADMIN ORDERS
 // ============================================================
+
+
+// =========================
+// V10 - Cancel order routes
+// =========================
+
+// Customer can cancel their own order while it is still new/pending/processing.
+app.patch(
+  '/api/store/orders/:id/cancel',
+  tenantMiddleware,
+  requireUser,
+  async (req, res) => {
+    try {
+      const orderId = String(req.params.id || '').trim();
+
+      if (!orderId) {
+        return res.status(400).json({
+          success: false,
+          error: 'Order ID is required'
+        });
+      }
+
+      const result = await dbQuery(
+        `
+          SELECT data
+          FROM orders
+          WHERE id = $1
+            AND tenant_id = $2
+          LIMIT 1
+        `,
+        [orderId, req.tenantId]
+      );
+
+      if (result.rowCount === 0) {
+        return res.status(404).json({
+          success: false,
+          error: 'Order not found'
+        });
+      }
+
+      const order = result.rows[0].data || {};
+
+      if (String(order.userId || '') !== String(req.userId || '')) {
+        return res.status(403).json({
+          success: false,
+          error: 'You can only cancel your own orders'
+        });
+      }
+
+      const currentStatus = String(order.status || 'new').toLowerCase();
+
+      if (!['new', 'pending', 'processing'].includes(currentStatus)) {
+        return res.status(400).json({
+          success: false,
+          error: 'This order cannot be cancelled now'
+        });
+      }
+
+      const updatedOrder = {
+        ...order,
+        status: 'cancelled',
+        cancelledAt: new Date().toISOString(),
+        cancelledBy: 'customer'
+      };
+
+      await dbQuery(
+        `
+          UPDATE orders
+          SET data = $1::jsonb
+          WHERE id = $2
+            AND tenant_id = $3
+        `,
+        [JSON.stringify(updatedOrder), orderId, req.tenantId]
+      );
+
+      return res.json({
+        success: true,
+        order: updatedOrder
+      });
+    } catch (error) {
+      console.error('Customer cancel order error:', error);
+
+      return res.status(500).json({
+        success: false,
+        error: 'Database error'
+      });
+    }
+  }
+);
+
+// Admin can cancel any order inside the current tenant.
+app.patch(
+  '/api/admin/orders/:id/cancel',
+  tenantMiddleware,
+  requireAdmin,
+  async (req, res) => {
+    try {
+      const orderId = String(req.params.id || '').trim();
+
+      if (!orderId) {
+        return res.status(400).json({
+          success: false,
+          error: 'Order ID is required'
+        });
+      }
+
+      const result = await dbQuery(
+        `
+          SELECT data
+          FROM orders
+          WHERE id = $1
+            AND tenant_id = $2
+          LIMIT 1
+        `,
+        [orderId, req.tenantId]
+      );
+
+      if (result.rowCount === 0) {
+        return res.status(404).json({
+          success: false,
+          error: 'Order not found'
+        });
+      }
+
+      const order = result.rows[0].data || {};
+      const currentStatus = String(order.status || 'new').toLowerCase();
+
+      if (currentStatus === 'cancelled') {
+        return res.status(400).json({
+          success: false,
+          error: 'Order is already cancelled'
+        });
+      }
+
+      const updatedOrder = {
+        ...order,
+        status: 'cancelled',
+        cancelledAt: new Date().toISOString(),
+        cancelledBy: 'admin'
+      };
+
+      await dbQuery(
+        `
+          UPDATE orders
+          SET data = $1::jsonb
+          WHERE id = $2
+            AND tenant_id = $3
+        `,
+        [JSON.stringify(updatedOrder), orderId, req.tenantId]
+      );
+
+      return res.json({
+        success: true,
+        order: updatedOrder
+      });
+    } catch (error) {
+      console.error('Admin cancel order error:', error);
+
+      return res.status(500).json({
+        success: false,
+        error: 'Database error'
+      });
+    }
+  }
+);
 
 app.get(
   '/api/admin/orders',
