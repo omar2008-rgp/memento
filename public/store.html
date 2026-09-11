@@ -493,7 +493,7 @@ renderProducts(products);
             <div class="product-name">${escapeHtml(p.name)}</div>
             ${desc ? `<div class="product-description">${escapeHtml(desc)}</div>` : ''}
             <div class="product-price">${Number(p.price)||0} ج.م</div>
-            <button class="add-to-cart-btn" onclick="event.stopPropagation();addToCart('${p.id}',${JSON.stringify(p.name)},${Number(p.price)||0})">أضف للسلة</button>
+            <button class="add-to-cart-btn" onclick="event.stopPropagation();addProductToCart('${p.id}')">أضف للسلة</button>
             <button class="secondary" style="width:100%;margin-top:8px" onclick="event.stopPropagation();openProductDetails('${p.id}')">👁️ عرض التفاصيل</button>
           </div>
         </article>`;
@@ -561,7 +561,7 @@ renderProducts(products);
           <div class="details-price">${Number(p.price)||0} ج.م</div>
           ${p.quantity !== null && p.quantity !== undefined ? `<div style="margin-bottom:12px;font-weight:800">المتاح: ${p.quantity}</div>` : ''}
           <div class="details-description">${escapeHtml(p.description || 'لا يوجد وصف إضافي لهذا المنتج.')}</div>
-          <button class="add-to-cart-btn" style="margin-top:18px" onclick="addToCart('${p.id}',${JSON.stringify(p.name)},${Number(p.price)||0});closeProductDetails();">🛒 أضف للسلة</button>
+          <button class="add-to-cart-btn" style="margin-top:18px" onclick="addProductToCart('${p.id}');closeProductDetails();">🛒 أضف للسلة</button>
         </div>`;
     }
 
@@ -579,10 +579,36 @@ renderProducts(products);
 
     // ===== Cart =====
     function addToCart(id, name, price) {
-      const existing = cart.find(item => item.id === id);
-      if (existing) existing.quantity++;
-      else cart.push({ id, name, price, quantity: 1 });
+      const existing = cart.find(item => String(item.id) === String(id));
+
+      if (existing) {
+        existing.quantity += 1;
+      } else {
+        cart.push({
+          id: String(id),
+          name: String(name || ''),
+          price: Number(price) || 0,
+          quantity: 1
+        });
+      }
+
       updateCartUI();
+      alert('✅ تم إضافة المنتج إلى السلة');
+    }
+
+    function addProductToCart(id) {
+      const product = products.find(p => String(p.id) === String(id));
+
+      if (!product) {
+        alert('❌ لم يتم العثور على المنتج');
+        return;
+      }
+
+      addToCart(
+        product.id,
+        product.name,
+        Number(product.price) || 0
+      );
     }
 
     function getSelectedGovernorate() {
