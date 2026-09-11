@@ -2472,6 +2472,114 @@ app.get(
 // CREATE AUTHENTICATED ORDER
 // ============================================================
 
+
+// =========================
+// V10 - Product details/images
+// =========================
+
+app.get(
+  '/api/store/products/:id',
+  tenantMiddleware,
+  async (req, res) => {
+    try {
+      const productId = String(req.params.id || '').trim();
+
+      const result = await dbQuery(
+        `
+          SELECT data
+          FROM products
+          WHERE id = $1
+            AND tenant_id = $2
+          LIMIT 1
+        `,
+        [productId, req.tenantId]
+      );
+
+      if (result.rowCount === 0) {
+        return res.status(404).json({
+          success: false,
+          error: 'Product not found'
+        });
+      }
+
+      const product = result.rows[0].data || {};
+
+      return res.json({
+        success: true,
+        product
+      });
+    } catch (error) {
+      console.error('Product details error:', error);
+
+      return res.status(500).json({
+        success: false,
+        error: 'Database error'
+      });
+    }
+  }
+);
+
+app.get(
+  '/api/store/products/:id/image/:index',
+  tenantMiddleware,
+  async (req, res) => {
+    try {
+      const productId = String(req.params.id || '').trim();
+      const index = Number.parseInt(req.params.index, 10);
+
+      if (!Number.isInteger(index) || index < 0) {
+        return res.status(400).send('Invalid image index');
+      }
+
+      const result = await dbQuery(
+        `
+          SELECT data
+          FROM products
+          WHERE id = $1
+            AND tenant_id = $2
+          LIMIT 1
+        `,
+        [productId, req.tenantId]
+      );
+
+      if (result.rowCount === 0) {
+        return res.status(404).send('Product not found');
+      }
+
+      const product = result.rows[0].data || {};
+      const images = Array.isArray(product.images)
+        ? product.images
+        : [];
+
+      const image = images[index];
+
+      if (!image || typeof image !== 'string') {
+        return res.status(404).send('Image not found');
+      }
+
+      const match = image.match(
+        /^data:([^;]+);base64,(.+)$/
+      );
+
+      if (!match) {
+        return res.status(400).send('Invalid image data');
+      }
+
+      const contentType = match[1];
+      const buffer = Buffer.from(match[2], 'base64');
+
+      res.setHeader('Content-Type', contentType);
+      res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
+
+      return res.send(buffer);
+    } catch (error) {
+      console.error('Product image error:', error);
+
+      return res.status(500).send('Database error');
+    }
+  }
+);
+
 app.post(
   '/api/store/orders',
   tenantMiddleware,
