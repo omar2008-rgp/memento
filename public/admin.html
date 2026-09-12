@@ -401,7 +401,7 @@ https://example.com/image-2.jpg"></textarea></div>
       try {
         let logo = document.getElementById('brandLogo').value.trim();
         const file = document.getElementById('brandLogoFile').files[0];
-        if (file) logo = await uploadImage(file);
+        if (file) logo = (await uploadImages([file]))[0] || '';
         const fees = getDeliveryFeesFromForm();
         const brand = {
           name: document.getElementById('brandName').value.trim(),
