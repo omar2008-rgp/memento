@@ -577,7 +577,10 @@ async function getProducts(
     rows
   } = await dbQuery(
     `
-      SELECT data
+      SELECT
+        id,
+        created_at,
+        data - 'images' AS data
       FROM products
       WHERE tenant_id = $1
       ORDER BY created_at ASC
@@ -585,9 +588,20 @@ async function getProducts(
     [tenantId]
   );
 
-  return rows.map(
-    row => row.data
-  );
+  return rows.map(row => {
+    const product =
+      row.data && typeof row.data === 'object'
+        ? { ...row.data }
+        : {};
+
+    // لا نرسل صور Base64 مع قائمة المنتجات.
+    // الصور يتم تحميلها بشكل منفصل عند الحاجة.
+    delete product.images;
+
+    product.id = row.id;
+
+    return product;
+  });
 }
 
 // ============================================================
@@ -2391,7 +2405,7 @@ app.get(
         `
         SELECT
           id,
-          data
+          data - 'images' AS data
         FROM products
         WHERE tenant_id = $1
         ORDER BY created_at DESC
@@ -2486,7 +2500,10 @@ app.get(
 
       const result = await dbQuery(
         `
-          SELECT data
+          SELECT
+            id,
+            data - 'images' AS data,
+            COALESCE(jsonb_array_length(data->'images'), 0)::int AS image_count
           FROM products
           WHERE id = $1
             AND tenant_id = $2
@@ -2502,11 +2519,18 @@ app.get(
         });
       }
 
-      const product = result.rows[0].data || {};
+      const product =
+        result.rows[0].data &&
+        typeof result.rows[0].data === 'object'
+          ? { ...result.rows[0].data }
+          : {};
+
+      product.id = result.rows[0].id;
 
       return res.json({
         success: true,
-        product
+        product,
+        imageCount: Number(result.rows[0].image_count) || 0
       });
     } catch (error) {
       console.error('Product details error:', error);
@@ -2533,25 +2557,20 @@ app.get(
 
       const result = await dbQuery(
         `
-          SELECT data
+          SELECT data->'images'->($3::int) AS image
           FROM products
           WHERE id = $1
             AND tenant_id = $2
           LIMIT 1
         `,
-        [productId, req.tenantId]
+        [productId, req.tenantId, index]
       );
 
       if (result.rowCount === 0) {
         return res.status(404).send('Product not found');
       }
 
-      const product = result.rows[0].data || {};
-      const images = Array.isArray(product.images)
-        ? product.images
-        : [];
-
-      const image = images[index];
+      const image = result.rows[0].image;
 
       if (!image || typeof image !== 'string') {
         return res.status(404).send('Image not found');

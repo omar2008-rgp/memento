@@ -539,7 +539,10 @@ renderProducts(products);
         const data = await res.json();
         if (!res.ok) throw new Error(data.error || 'فشل تحميل المنتج');
         const p = data.product || {};
-        detailsImages = Array.isArray(p.images) ? p.images : [];
+        detailsImages = Array.from(
+          { length: Number(data.imageCount) || 0 },
+          (_, i) => `${API_BASE}/store/products/${encodeURIComponent(p.id)}/image/${i}`
+        );
         detailsCurrent = 0;
         renderProductDetails(p);
       } catch (err) {
