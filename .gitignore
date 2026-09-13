@@ -3,4 +3,8 @@ node_modules/
 .env.local
 .env.*.local
 npm-debug.log*
-.DS_Store
+.DS_Storeadmin-backup-before-groups.html
+server-backup-before-groups.js
+server-backup-before-v10.js
+server-before-v10.js
+store-backup-before-groups.html

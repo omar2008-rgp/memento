@@ -67,6 +67,7 @@ button{border:0;border-radius:12px;padding:11px 17px;background:linear-gradient(
       <button class="tab-btn active" onclick="showTab('stats')" data-i18n="stats">📊 الإحصائيات</button>
       <button class="tab-btn" onclick="showTab('brand')" data-i18n="brand">📦 البراند</button>
       <button class="tab-btn" onclick="showTab('products')" data-i18n="products">🛍️ المنتجات</button>
+      <button class="tab-btn" onclick="showTab('groups')">🏷️ المجموعات</button>
       <button class="tab-btn" onclick="showTab('orders')" data-i18n="orders">📋 الطلبات</button>
       <button class="tab-btn" onclick="showTab('users')" data-i18n="users">👥 المستخدمين</button>
     </div>
@@ -164,6 +165,21 @@ button{border:0;border-radius:12px;padding:11px 17px;background:linear-gradient(
           <div class="form-group"><label data-i18n="price">السعر *</label><input type="number" id="productPrice" min="0" step="0.01"></div>
           <div class="form-group"><label data-i18n="qty">الكمية *</label><input type="number" id="productQuantity" min="0"></div>
           <div class="form-group"><label data-i18n="description">الوصف</label><textarea id="productDescription"></textarea></div>
+          <div class="form-group">
+            <label>المجموعات</label>
+            <div id="productGroupsSelector" style="
+              display:flex;
+              flex-wrap:wrap;
+              gap:8px;
+              padding:12px;
+              border:1px solid var(--line);
+              border-radius:12px;
+              background:var(--surface2);
+              min-height:48px;
+            ">
+              <span style="color:var(--muted);font-size:12px;">جاري تحميل المجموعات...</span>
+            </div>
+          </div>
           <div class="form-group"><label>روابط الصور (رابط في كل سطر)</label><textarea id="productImagesUrls" placeholder="https://example.com/image-1.jpg
 https://example.com/image-2.jpg"></textarea></div>
           <div class="form-group"><label>أو ارفع حتى 10 صور للمنتج</label><input type="file" id="productImageFiles" accept="image/*" multiple>
@@ -180,6 +196,41 @@ https://example.com/image-2.jpg"></textarea></div>
         <button class="secondary" onclick="loadProducts()" data-i18n="refresh">🔄 تحديث</button>
       </div>
       <div class="grid" id="productsList"><p style="text-align:center;grid-column:1/-1;color:var(--text-secondary);">جاري التحميل...</p></div>
+    </div>
+
+    <!-- ===== PRODUCT GROUPS TAB ===== -->
+    <div class="tab-content" id="groups">
+      <div class="form-section">
+        <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:18px;flex-wrap:wrap;">
+          <div>
+            <h3>🏷️ إدارة المجموعات</h3>
+            <p style="color:var(--muted);font-size:12px;margin-top:6px;">
+              أنشئ مجموعات مثل Samsung و iPhone و Xiaomi، ويمكن ربط المنتج بأكثر من مجموعة.
+            </p>
+          </div>
+          <button onclick="showGroupForm()">➕ إضافة مجموعة</button>
+        </div>
+
+        <div id="groupForm" style="display:none;margin-bottom:20px;padding:16px;border:1px solid var(--line);border-radius:14px;background:var(--surface2);">
+          <input type="hidden" id="editingGroupId">
+          <div class="form-group">
+            <label>اسم المجموعة *</label>
+            <input type="text" id="groupName" placeholder="مثال: Samsung">
+          </div>
+          <div class="form-group">
+            <label>ترتيب الظهور</label>
+            <input type="number" id="groupSortOrder" min="0" step="1" value="0">
+          </div>
+          <div style="display:flex;gap:10px;flex-wrap:wrap;">
+            <button onclick="saveProductGroup()">💾 حفظ المجموعة</button>
+            <button class="secondary" onclick="hideGroupForm()">إلغاء</button>
+          </div>
+        </div>
+
+        <div id="productGroupsList" class="grid">
+          <p style="text-align:center;grid-column:1/-1;color:var(--muted);">جاري تحميل المجموعات...</p>
+        </div>
+      </div>
     </div>
 
     <!-- ===== ORDERS TAB ===== -->
@@ -338,6 +389,7 @@ https://example.com/image-2.jpg"></textarea></div>
       if (btn) btn.classList.add('active');
       if (tabName === 'stats') loadStats();
       if (tabName === 'products') loadProducts();
+      if (tabName === 'groups') loadProductGroups();
       if (tabName === 'orders') loadOrders();
       if (tabName === 'users') loadUsers();
     }
@@ -438,6 +490,142 @@ https://example.com/image-2.jpg"></textarea></div>
       } catch (err) { alert('❌ ' + err.message); }
     }
 
+    // ===== Product Groups Management =====
+    async function renderProductGroupsManagement() {
+      const box = document.getElementById('productGroupsList');
+      if (!box) return;
+
+      try {
+        const res = await apiFetch(`${API_BASE}/admin/product-groups`, {
+          headers: authHeaders()
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error(data.error || 'فشل تحميل المجموعات');
+
+        productGroupsCache = Array.isArray(data)
+          ? data
+          : (Array.isArray(data.groups) ? data.groups : []);
+
+        if (!productGroupsCache.length) {
+          box.innerHTML = '<p style="text-align:center;grid-column:1/-1;color:var(--muted);">لا توجد مجموعات حتى الآن</p>';
+          renderProductGroupSelector(selectedProductGroupIds);
+          return;
+        }
+
+        box.innerHTML = productGroupsCache.map(group => `
+          <div class="card">
+            <h3>🏷️ ${escapeHtml(group.name)}</h3>
+            <p><strong>الترتيب:</strong> ${Number(group.sort_order) || 0}</p>
+            <p style="font-size:11px;color:var(--muted);word-break:break-all;">
+              ID: ${escapeHtml(group.id)}
+            </p>
+            <div class="card-buttons">
+              <button class="secondary" onclick="editProductGroup('${escapeHtml(group.id)}')">✏️ تعديل</button>
+              <button class="danger" onclick="deleteProductGroup('${escapeHtml(group.id)}')">🗑️ حذف</button>
+            </div>
+          </div>
+        `).join('');
+
+        renderProductGroupSelector(selectedProductGroupIds);
+      } catch (err) {
+        console.error('Render product groups error:', err);
+        box.innerHTML = `<p style="text-align:center;grid-column:1/-1;color:#dc2626;">❌ ${escapeHtml(err.message)}</p>`;
+      }
+    }
+
+    function showGroupForm(group = null) {
+      document.getElementById('groupForm').style.display = 'block';
+      document.getElementById('editingGroupId').value = group?.id || '';
+      document.getElementById('groupName').value = group?.name || '';
+      document.getElementById('groupSortOrder').value = Number(group?.sort_order) || 0;
+      document.getElementById('groupName').focus();
+    }
+
+    function hideGroupForm() {
+      document.getElementById('groupForm').style.display = 'none';
+      document.getElementById('editingGroupId').value = '';
+      document.getElementById('groupName').value = '';
+      document.getElementById('groupSortOrder').value = '0';
+    }
+
+    function editProductGroup(id) {
+      const group = productGroupsCache.find(g => String(g.id) === String(id));
+      if (!group) return;
+      showGroupForm(group);
+      document.getElementById('groupForm').scrollIntoView({behavior:'smooth', block:'center'});
+    }
+
+    async function saveProductGroup() {
+      const id = document.getElementById('editingGroupId').value;
+      const name = document.getElementById('groupName').value.trim();
+      const sortOrder = Math.max(
+        0,
+        parseInt(document.getElementById('groupSortOrder').value, 10) || 0
+      );
+
+      if (!name) {
+        alert('❌ اكتب اسم المجموعة');
+        return;
+      }
+
+      try {
+        const url = id
+          ? `${API_BASE}/admin/product-groups/${id}`
+          : `${API_BASE}/admin/product-groups`;
+
+        const method = id ? 'PUT' : 'POST';
+
+        const res = await apiFetch(url, {
+          method,
+          headers: authHeaders(true),
+          body: JSON.stringify({
+            name,
+            sortOrder
+          })
+        });
+
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error(data.error || 'فشل حفظ المجموعة');
+
+        hideGroupForm();
+        await renderProductGroupsManagement();
+        await loadProductGroups();
+
+        alert(id ? '✅ تم تعديل المجموعة' : '✅ تمت إضافة المجموعة');
+      } catch (err) {
+        alert('❌ ' + err.message);
+      }
+    }
+
+    async function deleteProductGroup(id) {
+      const group = productGroupsCache.find(g => String(g.id) === String(id));
+      const name = group?.name || '';
+
+      if (!confirm(`هل أنت متأكد من حذف المجموعة${name ? ` "${name}"` : ''}؟\nسيتم فصلها عن المنتجات المرتبطة بها.`)) {
+        return;
+      }
+
+      try {
+        const res = await apiFetch(`${API_BASE}/admin/product-groups/${id}`, {
+          method: 'DELETE'
+        });
+
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error(data.error || 'فشل حذف المجموعة');
+
+        if (String(document.getElementById('editingGroupId').value) === String(id)) {
+          hideGroupForm();
+        }
+
+        await renderProductGroupsManagement();
+        await loadProductGroups();
+
+        alert('✅ تم حذف المجموعة');
+      } catch (err) {
+        alert('❌ ' + err.message);
+      }
+    }
+
     // ===== Products =====
     let productsCache = [];
     let editingProductImages = [];
@@ -508,6 +696,136 @@ https://example.com/image-2.jpg"></textarea></div>
 
     function cancelProductEdit() { resetProductForm(); document.getElementById('productForm').style.display = 'none'; }
 
+    // ===== Product Groups =====
+    let productGroupsCache = [];
+    let selectedProductGroupIds = [];
+
+    async function loadProductGroups() {
+      try {
+        const res = await apiFetch(`${API_BASE}/admin/product-groups`, {
+          headers: authHeaders()
+        });
+
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error(data.error || 'فشل تحميل المجموعات');
+
+        productGroupsCache = Array.isArray(data)
+          ? data
+          : (Array.isArray(data.groups) ? data.groups : []);
+
+        renderProductGroupSelector(selectedProductGroupIds);
+      } catch (err) {
+        console.error('Load product groups error:', err);
+        const el = document.getElementById('productGroupsSelector');
+        if (el) {
+          el.innerHTML = '<span style="color:#dc2626;font-size:12px;">❌ فشل تحميل المجموعات</span>';
+        }
+      }
+    }
+
+    function renderProductGroupSelector(selectedIds = []) {
+      const el = document.getElementById('productGroupsSelector');
+      if (!el) return;
+
+      selectedProductGroupIds = [...new Set(
+        (selectedIds || []).map(id => String(id))
+      )];
+
+      if (!productGroupsCache.length) {
+        el.innerHTML = '<span style="color:var(--muted);font-size:12px;">لا توجد مجموعات حتى الآن</span>';
+        return;
+      }
+
+      el.innerHTML = productGroupsCache.map(group => {
+        const id = String(group.id);
+        const checked = selectedProductGroupIds.includes(id);
+
+        return `
+          <label style="
+            display:inline-flex;
+            align-items:center;
+            gap:7px;
+            padding:8px 11px;
+            border:1px solid ${checked ? 'var(--primary)' : 'var(--line)'};
+            border-radius:10px;
+            background:${checked ? 'rgba(109,93,252,.10)' : 'var(--surface)'};
+            color:var(--text);
+            cursor:pointer;
+            margin:0;
+            font-size:12px;
+            font-weight:800;
+          ">
+            <input
+              type="checkbox"
+              value="${escapeHtml(id)}"
+              ${checked ? 'checked' : ''}
+              onchange="toggleProductGroup('${escapeHtml(id)}', this.checked)"
+              style="width:auto;margin:0;"
+            >
+            ${escapeHtml(group.name)}
+          </label>
+        `;
+      }).join('');
+    }
+
+    function toggleProductGroup(groupId, checked) {
+      groupId = String(groupId);
+
+      if (checked) {
+        if (!selectedProductGroupIds.includes(groupId)) {
+          selectedProductGroupIds.push(groupId);
+        }
+      } else {
+        selectedProductGroupIds =
+          selectedProductGroupIds.filter(id => id !== groupId);
+      }
+
+      renderProductGroupSelector(selectedProductGroupIds);
+    }
+
+    async function loadProductGroupsForProduct(productId) {
+      try {
+        const res = await apiFetch(
+          `${API_BASE}/admin/products/${productId}/groups`,
+          { headers: authHeaders() }
+        );
+
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error(data.error || 'فشل تحميل مجموعات المنتج');
+
+        const groups = Array.isArray(data)
+          ? data
+          : (Array.isArray(data.groups) ? data.groups : []);
+
+        const ids = groups.map(group => group.id);
+        renderProductGroupSelector(ids);
+      } catch (err) {
+        console.error('Load product groups for product error:', err);
+        renderProductGroupSelector([]);
+      }
+    }
+
+    async function saveProductGroups(productId) {
+      if (!productId) return;
+
+      const res = await apiFetch(
+        `${API_BASE}/admin/products/${productId}/groups`,
+        {
+          method: 'PUT',
+          headers: authHeaders(true),
+          body: JSON.stringify({
+            groupIds: selectedProductGroupIds
+          })
+        }
+      );
+
+      const data = await res.json().catch(() => ({}));
+
+      if (!res.ok) {
+        throw new Error(data.error || 'فشل حفظ مجموعات المنتج');
+      }
+    }
+
     async function saveProduct() {
       const id = document.getElementById('editingProductId').value;
       try {
@@ -528,15 +846,25 @@ https://example.com/image-2.jpg"></textarea></div>
         const res = await apiFetch(url, {method, headers:authHeaders(true), body:JSON.stringify(product)});
         const data = await res.json().catch(() => ({}));
         if (!res.ok) throw new Error(data.error || 'فشل حفظ المنتج');
-        alert(id ? '✅ تم تعديل المنتج' : '✅ تمت إضافة المنتج');
+        const savedProductId =
+          data.id ||
+          data.product?.id ||
+          id;
+
+        if (savedProductId) {
+          await saveProductGroups(savedProductId);
+        }
+
+        alert(id ? '✅ تم تعديل المنتج والمجموعات' : '✅ تمت إضافة المنتج والمجموعات');
         cancelProductEdit();
         loadProducts();
       } catch (err) { alert('❌ ' + err.message); }
     }
 
-    function editProduct(id) {
+    async function editProduct(id) {
       const p = productsCache.find(p => p.id === id);
       if (!p) return;
+
       document.getElementById('productForm').style.display = 'block';
       document.getElementById('editingProductId').value = p.id;
       document.getElementById('productFormTitle').textContent = translations.edit_product || 'تعديل المنتج';
@@ -545,9 +873,20 @@ https://example.com/image-2.jpg"></textarea></div>
       document.getElementById('productPrice').value = p.price ?? '';
       document.getElementById('productQuantity').value = p.quantity ?? '';
       document.getElementById('productDescription').value = p.description || '';
+
       editingProductImages = Array.isArray(p.images) ? [...p.images] : [];
+
       document.getElementById('productImagesUrls').value = '';
       renderProductImagePreview();
+
+      if (typeof renderProductGroupSelector === 'function') {
+        renderProductGroupSelector([]);
+      }
+
+      if (typeof loadProductGroupsForProduct === 'function') {
+        await loadProductGroupsForProduct(p.id);
+      }
+
       document.getElementById('productForm').scrollIntoView({behavior:'smooth'});
     }
 
@@ -638,7 +977,13 @@ https://example.com/image-2.jpg"></textarea></div>
 
     // ===== Init =====
     async function initAdminData() {
-      await Promise.all([loadBrand(), loadStats(), loadProducts()]);
+      await Promise.all([
+        loadBrand(),
+        loadStats(),
+        loadProducts(),
+        loadProductGroups(),
+        renderProductGroupsManagement()
+      ]);
     }
 
     window.addEventListener('load', async () => {

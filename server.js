@@ -122,6 +122,55 @@ async function testDatabaseConnection() {
   }
 }
 
+
+// ============================================================
+// PRODUCT GROUPS / CATEGORIES
+// ============================================================
+
+async function ensureProductGroupsTables() {
+  if (!pool) return;
+
+  await dbQuery(`
+    CREATE TABLE IF NOT EXISTS product_groups (
+      id UUID PRIMARY KEY,
+      tenant_id TEXT NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+      name TEXT NOT NULL,
+      slug TEXT NOT NULL,
+      sort_order INTEGER NOT NULL DEFAULT 0,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      UNIQUE (tenant_id, slug)
+    )
+  `);
+
+  await dbQuery(`
+    CREATE TABLE IF NOT EXISTS product_group_members (
+      product_id TEXT NOT NULL REFERENCES products(id) ON DELETE CASCADE,
+      group_id UUID NOT NULL REFERENCES product_groups(id) ON DELETE CASCADE,
+      tenant_id TEXT NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      PRIMARY KEY (product_id, group_id)
+    )
+  `);
+
+  await dbQuery(`
+    CREATE INDEX IF NOT EXISTS idx_product_groups_tenant
+    ON product_groups (tenant_id, sort_order, created_at)
+  `);
+
+  await dbQuery(`
+    CREATE INDEX IF NOT EXISTS idx_product_group_members_group
+    ON product_group_members (tenant_id, group_id, product_id)
+  `);
+
+  await dbQuery(`
+    CREATE INDEX IF NOT EXISTS idx_product_group_members_product
+    ON product_group_members (tenant_id, product_id, group_id)
+  `);
+
+  console.log('✅ Product groups tables ready');
+}
+
 // ============================================================
 // MIDDLEWARE
 // ============================================================
@@ -1537,6 +1586,357 @@ app.post(
   }
 );
 
+
+// ============================================================
+// PRODUCT GROUPS / CATEGORIES APIs
+// ============================================================
+
+// Get groups for current tenant
+app.get(
+  '/api/admin/product-groups',
+  tenantMiddleware,
+  requireAdmin,
+  async (req, res) => {
+    try {
+      const result = await dbQuery(
+        `
+          SELECT
+            id,
+            name,
+            slug,
+            sort_order,
+            created_at,
+            updated_at
+          FROM product_groups
+          WHERE tenant_id = $1
+          ORDER BY sort_order ASC, created_at ASC
+        `,
+        [req.tenantId]
+      );
+
+      return res.json({
+        success: true,
+        groups: result.rows
+      });
+
+    } catch (error) {
+      console.error('Get product groups error:', error);
+
+      return res.status(500).json({
+        success: false,
+        error: 'Failed to load product groups'
+      });
+    }
+  }
+);
+
+
+// Create group
+app.post(
+  '/api/admin/product-groups',
+  tenantMiddleware,
+  requireAdmin,
+  async (req, res) => {
+    try {
+      const name = String(req.body?.name || '').trim();
+
+      if (!name) {
+        return res.status(400).json({
+          success: false,
+          error: 'اسم المجموعة مطلوب'
+        });
+      }
+
+      if (name.length > 100) {
+        return res.status(400).json({
+          success: false,
+          error: 'اسم المجموعة طويل جدًا'
+        });
+      }
+
+      const slug = name
+        .toLowerCase()
+        .replace(/[^\u0600-\u06ffa-z0-9]+/gi, '-')
+        .replace(/^-+|-+$/g, '')
+        .slice(0, 80);
+
+      if (!slug) {
+        return res.status(400).json({
+          success: false,
+          error: 'اسم المجموعة غير صالح'
+        });
+      }
+
+      const existing = await dbQuery(
+        `
+          SELECT id
+          FROM product_groups
+          WHERE tenant_id = $1
+            AND slug = $2
+          LIMIT 1
+        `,
+        [req.tenantId, slug]
+      );
+
+      if (existing.rows.length > 0) {
+        return res.status(409).json({
+          success: false,
+          error: 'المجموعة موجودة بالفعل'
+        });
+      }
+
+      const sortOrder =
+        Number.isFinite(Number(req.body?.sortOrder))
+          ? Number(req.body.sortOrder)
+          : 0;
+
+      const group = {
+        id: uuidv4(),
+        name,
+        slug,
+        sortOrder
+      };
+
+      await dbQuery(
+        `
+          INSERT INTO product_groups (
+            id,
+            tenant_id,
+            name,
+            slug,
+            sort_order
+          )
+          VALUES ($1, $2, $3, $4, $5)
+        `,
+        [
+          group.id,
+          req.tenantId,
+          group.name,
+          group.slug,
+          group.sortOrder
+        ]
+      );
+
+      return res.status(201).json({
+        success: true,
+        group
+      });
+
+    } catch (error) {
+      console.error('Create product group error:', error);
+
+      return res.status(500).json({
+        success: false,
+        error: 'Failed to create product group'
+      });
+    }
+  }
+);
+
+
+// Update group
+app.put(
+  '/api/admin/product-groups/:id',
+  tenantMiddleware,
+  requireAdmin,
+  async (req, res) => {
+    try {
+      const groupId =
+        String(req.params.id || '').trim();
+
+      const name =
+        String(req.body?.name || '').trim();
+
+      if (!groupId || !name) {
+        return res.status(400).json({
+          success: false,
+          error: 'بيانات المجموعة غير مكتملة'
+        });
+      }
+
+      const slug = name
+        .toLowerCase()
+        .replace(/[^\u0600-\u06ffa-z0-9]+/gi, '-')
+        .replace(/^-+|-+$/g, '')
+        .slice(0, 80);
+
+      if (!slug) {
+        return res.status(400).json({
+          success: false,
+          error: 'اسم المجموعة غير صالح'
+        });
+      }
+
+      const duplicate = await dbQuery(
+        `
+          SELECT id
+          FROM product_groups
+          WHERE tenant_id = $1
+            AND slug = $2
+            AND id <> $3
+          LIMIT 1
+        `,
+        [
+          req.tenantId,
+          slug,
+          groupId
+        ]
+      );
+
+      if (duplicate.rows.length > 0) {
+        return res.status(409).json({
+          success: false,
+          error: 'هناك مجموعة بنفس الاسم'
+        });
+      }
+
+      const sortOrder =
+        Number.isFinite(Number(req.body?.sortOrder))
+          ? Number(req.body.sortOrder)
+          : 0;
+
+      const result = await dbQuery(
+        `
+          UPDATE product_groups
+          SET
+            name = $1,
+            slug = $2,
+            sort_order = $3,
+            updated_at = NOW()
+          WHERE id = $4
+            AND tenant_id = $5
+          RETURNING
+            id,
+            name,
+            slug,
+            sort_order,
+            created_at,
+            updated_at
+        `,
+        [
+          name,
+          slug,
+          sortOrder,
+          groupId,
+          req.tenantId
+        ]
+      );
+
+      if (result.rows.length === 0) {
+        return res.status(404).json({
+          success: false,
+          error: 'المجموعة غير موجودة'
+        });
+      }
+
+      return res.json({
+        success: true,
+        group: result.rows[0]
+      });
+
+    } catch (error) {
+      console.error('Update product group error:', error);
+
+      return res.status(500).json({
+        success: false,
+        error: 'Failed to update product group'
+      });
+    }
+  }
+);
+
+
+// Delete group
+app.delete(
+  '/api/admin/product-groups/:id',
+  tenantMiddleware,
+  requireAdmin,
+  async (req, res) => {
+    try {
+      const groupId =
+        String(req.params.id || '').trim();
+
+      if (!groupId) {
+        return res.status(400).json({
+          success: false,
+          error: 'Group ID is required'
+        });
+      }
+
+      const result = await dbQuery(
+        `
+          DELETE FROM product_groups
+          WHERE id = $1
+            AND tenant_id = $2
+          RETURNING id
+        `,
+        [
+          groupId,
+          req.tenantId
+        ]
+      );
+
+      if (result.rows.length === 0) {
+        return res.status(404).json({
+          success: false,
+          error: 'المجموعة غير موجودة'
+        });
+      }
+
+      return res.json({
+        success: true,
+        id: result.rows[0].id
+      });
+
+    } catch (error) {
+      console.error('Delete product group error:', error);
+
+      return res.status(500).json({
+        success: false,
+        error: 'Failed to delete product group'
+      });
+    }
+  }
+);
+
+
+// Public store groups
+app.get(
+  '/api/store/product-groups',
+  tenantMiddleware,
+  async (req, res) => {
+    try {
+      const result = await dbQuery(
+        `
+          SELECT
+            id,
+            name,
+            slug,
+            sort_order
+          FROM product_groups
+          WHERE tenant_id = $1
+          ORDER BY sort_order ASC, created_at ASC
+        `,
+        [req.tenantId]
+      );
+
+      return res.json({
+        success: true,
+        groups: result.rows
+      });
+
+    } catch (error) {
+      console.error('Store product groups error:', error);
+
+      return res.status(500).json({
+        success: false,
+        error: 'Failed to load product groups'
+      });
+    }
+  }
+);
+
+
 // ============================================================
 // ADMIN PRODUCTS
 // ============================================================
@@ -1655,6 +2055,239 @@ app.post(
         error:
           'Database error'
       });
+    }
+  }
+);
+
+
+// ============================================================
+// PRODUCT <-> GROUPS
+// ============================================================
+
+// Get groups assigned to a product
+app.get(
+  '/api/admin/products/:id/groups',
+  tenantMiddleware,
+  requireAdmin,
+  async (req, res) => {
+    try {
+      const productId =
+        String(req.params.id || '').trim();
+
+      if (!productId) {
+        return res.status(400).json({
+          success: false,
+          error: 'Product ID is required'
+        });
+      }
+
+      const product = await dbQuery(
+        `
+          SELECT id
+          FROM products
+          WHERE id = $1
+            AND tenant_id = $2
+          LIMIT 1
+        `,
+        [
+          productId,
+          req.tenantId
+        ]
+      );
+
+      if (product.rows.length === 0) {
+        return res.status(404).json({
+          success: false,
+          error: 'Product not found'
+        });
+      }
+
+      const result = await dbQuery(
+        `
+          SELECT
+            g.id,
+            g.name,
+            g.slug,
+            g.sort_order
+          FROM product_groups g
+          INNER JOIN product_group_members m
+            ON m.group_id = g.id
+           AND m.tenant_id = g.tenant_id
+          WHERE m.product_id = $1
+            AND m.tenant_id = $2
+          ORDER BY g.sort_order ASC, g.created_at ASC
+        `,
+        [
+          productId,
+          req.tenantId
+        ]
+      );
+
+      return res.json({
+        success: true,
+        groups: result.rows
+      });
+
+    } catch (error) {
+      console.error(
+        'Get product groups error:',
+        error
+      );
+
+      return res.status(500).json({
+        success: false,
+        error: 'Failed to load product groups'
+      });
+    }
+  }
+);
+
+
+// Assign multiple groups to a product
+app.put(
+  '/api/admin/products/:id/groups',
+  tenantMiddleware,
+  requireAdmin,
+  async (req, res) => {
+    const client = await pool.connect();
+
+    try {
+      const productId =
+        String(req.params.id || '').trim();
+
+      if (!productId) {
+        client.release();
+
+        return res.status(400).json({
+          success: false,
+          error: 'Product ID is required'
+        });
+      }
+
+      const product = await client.query(
+        `
+          SELECT id
+          FROM products
+          WHERE id = $1
+            AND tenant_id = $2
+          LIMIT 1
+        `,
+        [
+          productId,
+          req.tenantId
+        ]
+      );
+
+      if (product.rows.length === 0) {
+        client.release();
+
+        return res.status(404).json({
+          success: false,
+          error: 'Product not found'
+        });
+      }
+
+      let groupIds =
+        Array.isArray(req.body?.groupIds)
+          ? req.body.groupIds
+          : [];
+
+      groupIds = [
+        ...new Set(
+          groupIds
+            .map(id => String(id || '').trim())
+            .filter(Boolean)
+        )
+      ];
+
+      if (groupIds.length > 0) {
+        const validGroups = await client.query(
+          `
+            SELECT id
+            FROM product_groups
+            WHERE tenant_id = $1
+              AND id = ANY($2::uuid[])
+          `,
+          [
+            req.tenantId,
+            groupIds
+          ]
+        );
+
+        const validIds =
+          new Set(
+            validGroups.rows.map(
+              row => String(row.id)
+            )
+          );
+
+        groupIds =
+          groupIds.filter(
+            id => validIds.has(String(id))
+          );
+      }
+
+      await client.query('BEGIN');
+
+      // Remove old assignments for this product
+      await client.query(
+        `
+          DELETE FROM product_group_members
+          WHERE product_id = $1
+            AND tenant_id = $2
+        `,
+        [
+          productId,
+          req.tenantId
+        ]
+      );
+
+      // Add new assignments
+      for (const groupId of groupIds) {
+        await client.query(
+          `
+            INSERT INTO product_group_members (
+              product_id,
+              group_id,
+              tenant_id
+            )
+            VALUES ($1, $2, $3)
+            ON CONFLICT (product_id, group_id)
+            DO NOTHING
+          `,
+          [
+            productId,
+            groupId,
+            req.tenantId
+          ]
+        );
+      }
+
+      await client.query('COMMIT');
+
+      return res.json({
+        success: true,
+        productId,
+        groupIds
+      });
+
+    } catch (error) {
+      try {
+        await client.query('ROLLBACK');
+      } catch {}
+
+      console.error(
+        'Assign product groups error:',
+        error
+      );
+
+      return res.status(500).json({
+        success: false,
+        error: 'Failed to update product groups'
+      });
+
+    } finally {
+      client.release();
     }
   }
 );
@@ -2401,17 +3034,52 @@ app.get(
   tenantMiddleware,
   async (req, res) => {
     try {
-      const result = await dbQuery(
-        `
-        SELECT
-          id,
-          data - 'images' AS data
-        FROM products
-        WHERE tenant_id = $1
-        ORDER BY created_at DESC
-        `,
-        [req.tenantId]
-      );
+      const groupId = String(req.query.groupId || '').trim();
+
+      let result;
+
+      if (groupId) {
+        const uuidRegex =
+          /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+        if (!uuidRegex.test(groupId)) {
+          return res.status(400).json({
+            success: false,
+            error: 'معرّف المجموعة غير صالح'
+          });
+        }
+
+        result = await dbQuery(
+          `
+          SELECT
+            p.id,
+            p.data - 'images' AS data
+          FROM products p
+          WHERE p.tenant_id = $1
+            AND EXISTS (
+              SELECT 1
+              FROM product_group_members pgm
+              WHERE pgm.product_id = p.id
+                AND pgm.group_id = $2::uuid
+                AND pgm.tenant_id = p.tenant_id
+            )
+          ORDER BY p.created_at DESC
+          `,
+          [req.tenantId, groupId]
+        );
+      } else {
+        result = await dbQuery(
+          `
+          SELECT
+            id,
+            data - 'images' AS data
+          FROM products
+          WHERE tenant_id = $1
+          ORDER BY created_at DESC
+          `,
+          [req.tenantId]
+        );
+      }
 
       const products = result.rows.map(row => {
         const data =
@@ -2956,6 +3624,7 @@ app.use((err, req, res, next) => {
 async function startServer() {
   try {
     await testDatabaseConnection();
+    await ensureProductGroupsTables();
 
     app.listen(PORT, '0.0.0.0', () => {
       console.log(
