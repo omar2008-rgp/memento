@@ -30,6 +30,24 @@ button{border:0;border-radius:12px;padding:11px 17px;background:linear-gradient(
 .delivery-row{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:11px 12px;border:1px solid var(--line);border-radius:12px;background:var(--surface2)}.delivery-row>span{font-size:13px;font-weight:800}.delivery-input-wrap{display:flex;align-items:center;gap:6px;min-width:125px}.delivery-input-wrap input{padding:9px 10px}.delivery-input-wrap span{font-size:11px;color:var(--muted);font-weight:800;white-space:nowrap}
 
 .admin-login-overlay{position:fixed;inset:0;z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px;background:radial-gradient(circle at top,#30276f 0,#101526 48%,#070b14 100%);transition:.25s}.admin-login-overlay.hidden{opacity:0;visibility:hidden;pointer-events:none}.admin-login-card{width:min(440px,100%);padding:34px;border:1px solid rgba(255,255,255,.12);border-radius:26px;background:rgba(18,26,43,.92);color:#fff;box-shadow:0 30px 100px rgba(0,0,0,.4);backdrop-filter:blur(20px)}.admin-login-icon{width:62px;height:62px;border-radius:18px;display:grid;place-items:center;background:linear-gradient(135deg,#8b7cff,#5848e8);font-size:28px;margin-bottom:18px;box-shadow:0 12px 28px rgba(109,93,252,.28)}.admin-login-kicker{font-size:12px;color:#aeb8ca;font-weight:800;margin-bottom:7px}.admin-login-card h2{font-size:27px;margin-bottom:8px}.admin-login-card p{font-size:13px;line-height:1.8;color:#aeb8ca;margin-bottom:24px}.admin-login-card label{color:#fff!important}.password-wrap{position:relative}.password-wrap input{padding-left:52px!important;background:#0e1525!important;color:#fff!important;border-color:#2b3850!important}.show-password{position:absolute;left:7px;top:7px;width:38px;height:38px;padding:0!important;background:transparent!important;color:#9aa7bb!important;box-shadow:none!important}.admin-login-error{min-height:22px;margin:9px 0;color:#fca5a5;font-size:12px;font-weight:700}.admin-login-submit{width:100%;padding:13px 16px!important;border-radius:13px!important}.admin-login-submit:disabled{opacity:.6;cursor:wait}.order-status{display:inline-flex;padding:5px 10px;border-radius:999px;font-size:11px;font-weight:900;background:#eef2ff;color:#4338ca}.order-status.cancelled{background:#fff1f2;color:#b91c1c}.order-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px}.product-images-preview{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}.product-images-preview .image-preview{position:relative;width:78px;height:78px}.product-images-preview img{width:100%;height:100%;object-fit:cover;border-radius:10px;border:1px solid var(--line)}.image-remove{position:absolute!important;top:-6px;right:-6px;width:22px;height:22px;padding:0!important;border-radius:50%!important;background:#dc2626!important;color:#fff!important;font-size:11px!important;box-shadow:none!important}
+
+/* ===== Store Colors ===== */
+.color-palette{display:flex;flex-wrap:wrap;gap:10px;margin-top:12px}
+.color-swatch{width:82px;height:82px;border:2px solid var(--line);border-radius:15px;cursor:pointer;position:relative;overflow:hidden;transition:.2s}
+.color-swatch:hover{transform:translateY(-2px)}
+.color-swatch span{position:absolute;bottom:0;left:0;right:0;background:rgba(0,0,0,.62);color:#fff;font-size:10px;font-weight:800;text-align:center;padding:4px;direction:ltr}
+.color-controls{display:grid;grid-template-columns:repeat(2,1fr);gap:14px}
+.color-control{padding:14px;border:1px solid var(--line);border-radius:14px;background:var(--surface2)}
+.color-control-row{display:flex;align-items:center;gap:8px}
+.color-control input[type=color]{width:52px;height:42px;padding:3px;border-radius:10px;cursor:pointer}
+.color-control input[type=text]{direction:ltr;text-align:left}
+.logo-color-preview{display:flex;gap:18px;align-items:center;flex-wrap:wrap;padding:16px;border:1px solid var(--line);border-radius:16px;background:var(--surface2)}
+.logo-color-preview img{width:110px;height:110px;object-fit:contain;border-radius:14px;background:#fff;border:1px solid var(--line);padding:8px}
+.color-note{font-size:12px;color:var(--muted);line-height:1.8;margin-top:7px}
+.color-preview-box{padding:20px;border-radius:18px;min-height:150px;display:flex;align-items:center;justify-content:center}
+.color-preview-card{width:min(420px,100%);padding:18px;border-radius:16px;background:#fff;box-shadow:0 8px 24px rgba(0,0,0,.12)}
+@media(max-width:680px){.color-controls{grid-template-columns:1fr}.color-swatch{width:70px;height:70px}}
+
 </style>
 </head>
 <body>
@@ -66,6 +84,7 @@ button{border:0;border-radius:12px;padding:11px 17px;background:linear-gradient(
     <div class="tabs">
       <button class="tab-btn active" onclick="showTab('stats')" data-i18n="stats">📊 الإحصائيات</button>
       <button class="tab-btn" onclick="showTab('brand')" data-i18n="brand">📦 البراند</button>
+      <button class="tab-btn" onclick="showTab('colors')">🎨 ألوان المتجر</button>
       <button class="tab-btn" onclick="showTab('products')" data-i18n="products">🛍️ المنتجات</button>
       <button class="tab-btn" onclick="showTab('groups')">🏷️ المجموعات</button>
       <button class="tab-btn" onclick="showTab('orders')" data-i18n="orders">📋 الطلبات</button>
@@ -146,6 +165,53 @@ button{border:0;border-radius:12px;padding:11px 17px;background:linear-gradient(
         <div class="form-group"><label data-i18n="logo_url">رابط الشعار</label><input type="text" id="brandLogo"></div>
         <div class="form-group"><label data-i18n="upload_image">أو رفع صورة جديدة</label><input type="file" id="brandLogoFile" accept="image/*"></div>
         <button onclick="saveBrand()" data-i18n="save">💾 حفظ البيانات</button>
+      </div>
+    </div>
+
+
+    <!-- ===== STORE COLORS TAB ===== -->
+    <div class="tab-content" id="colors">
+      <div class="form-section">
+        <h3>🎨 ألوان المتجر</h3>
+        <p class="color-note">ارفع لوجو البراند من تابة البراند، وسيتم استخراج الألوان الرئيسية منه تلقائيًا. تقدر تعدّل أي لون وتحفظه.</p>
+      </div>
+
+      <div class="form-section">
+        <h3>🖼️ ألوان اللوجو المكتشفة</h3>
+        <div class="logo-color-preview">
+          <img id="colorsLogoPreview" alt="Logo">
+          <div style="flex:1;min-width:220px;">
+            <strong id="colorsLogoStatus">لم يتم تحميل لوجو حتى الآن</strong>
+            <p class="color-note">اضغط على لون لتطبيقه على اللون الأساسي.</p>
+            <div id="detectedColors" class="color-palette"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="form-section">
+        <h3>🛠️ تخصيص الألوان</h3>
+        <div class="color-controls">
+          <div class="color-control"><label>🎯 اللون الأساسي</label><div class="color-control-row"><input type="color" id="storeColorPrimary" value="#6d5dfc"><input type="text" id="storeColorPrimaryText" value="#6d5dfc" maxlength="7"></div></div>
+          <div class="color-control"><label>✨ لون الأزرار</label><div class="color-control-row"><input type="color" id="storeColorButton" value="#5848e8"><input type="text" id="storeColorButtonText" value="#5848e8" maxlength="7"></div></div>
+          <div class="color-control"><label>🧱 لون الخلفية</label><div class="color-control-row"><input type="color" id="storeColorBackground" value="#f4f7fb"><input type="text" id="storeColorBackgroundText" value="#f4f7fb" maxlength="7"></div></div>
+          <div class="color-control"><label>📝 لون النص</label><div class="color-control-row"><input type="color" id="storeColorText" value="#172033"><input type="text" id="storeColorTextText" value="#172033" maxlength="7"></div></div>
+        </div>
+        <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:18px;">
+          <button type="button" onclick="useDetectedColors()">🎨 استخدام ألوان اللوجو</button>
+          <button type="button" class="secondary" onclick="resetStoreColors()">↩️ الافتراضي</button>
+          <button type="button" onclick="saveStoreColors()">💾 حفظ الألوان</button>
+        </div>
+      </div>
+
+      <div class="form-section">
+        <h3>👀 معاينة</h3>
+        <div id="storeColorPreview" class="color-preview-box">
+          <div id="storeColorPreviewCard" class="color-preview-card">
+            <div style="font-size:20px;font-weight:900;margin-bottom:7px;">اسم البراند</div>
+            <div style="font-size:13px;opacity:.75;margin-bottom:16px;">معاينة تقريبية لألوان المتجر</div>
+            <button type="button" id="storeColorPreviewButton">أضف للسلة</button>
+          </div>
+        </div>
       </div>
     </div>
 
@@ -389,7 +455,8 @@ https://example.com/image-2.jpg"></textarea></div>
       if (btn) btn.classList.add('active');
       if (tabName === 'stats') loadStats();
       if (tabName === 'products') loadProducts();
-      if (tabName === 'groups') loadProductGroups();
+      if (tabName === 'groups') renderProductGroupsManagement();
+      if (tabName === 'colors') loadBrand();
       if (tabName === 'orders') loadOrders();
       if (tabName === 'users') loadUsers();
     }
@@ -446,6 +513,7 @@ https://example.com/image-2.jpg"></textarea></div>
         document.getElementById('brandTiktok').value = brand.tiktok || '';
         document.getElementById('brandLogo').value = brand.logo || '';
         fillDeliveryFees(brand.deliveryFees, Number(brand.deliveryFee) || 0);
+        await loadStoreColors(brand);
       } catch (err) { console.error(err); }
     }
 
@@ -472,6 +540,7 @@ https://example.com/image-2.jpg"></textarea></div>
         const res = await apiFetch(`${API_BASE}/admin/brand`, {method:'POST', headers:authHeaders(true), body:JSON.stringify(brand)});
         if (!res.ok) throw new Error('فشل حفظ بيانات البراند');
         alert('✅ تم حفظ بيانات البراند وأسعار التوصيل');
+        await loadStoreColors(brand);
       } catch (err) { alert('❌ ' + err.message); }
     }
 
@@ -488,6 +557,122 @@ https://example.com/image-2.jpg"></textarea></div>
         if (!saveRes.ok) throw new Error('فشل حفظ أسعار التوصيل');
         alert('✅ تم حفظ أسعار التوصيل لكل المحافظات');
       } catch (err) { alert('❌ ' + err.message); }
+    }
+
+
+    // ===== Store Colors =====
+    const DEFAULT_STORE_COLORS = {
+      primary: '#6d5dfc',
+      button: '#5848e8',
+      background: '#f4f7fb',
+      text: '#172033'
+    };
+    let detectedLogoColors = [];
+    let storeColors = {...DEFAULT_STORE_COLORS};
+
+    function colorId(name){
+      return 'storeColor' + name.charAt(0).toUpperCase() + name.slice(1);
+    }
+    function validHex(v){ return /^#[0-9a-f]{6}$/i.test(String(v||'').trim()); }
+    function setStoreColor(name,value){
+      const v = validHex(value) ? String(value).trim().toLowerCase() : DEFAULT_STORE_COLORS[name];
+      const c=document.getElementById(colorId(name));
+      const t=document.getElementById(colorId(name)+'Text');
+      if(c)c.value=v; if(t)t.value=v; storeColors[name]=v;
+    }
+    function updateStoreColorPreview(){
+      ['primary','button','background','text'].forEach(name=>{
+        const c=document.getElementById(colorId(name));
+        const t=document.getElementById(colorId(name)+'Text');
+        if(!c||!t)return;
+        if(validHex(t.value)){c.value=t.value;storeColors[name]=t.value.toLowerCase();}
+        else t.value=storeColors[name];
+      });
+      const box=document.getElementById('storeColorPreview');
+      const card=document.getElementById('storeColorPreviewCard');
+      const btn=document.getElementById('storeColorPreviewButton');
+      if(box)box.style.background=storeColors.background;
+      if(card)card.style.color=storeColors.text;
+      if(btn){btn.style.background=storeColors.button;btn.style.color='#fff';btn.style.padding='10px 16px';btn.style.borderRadius='10px';}
+    }
+    function bindColorInputs(){
+      ['primary','button','background','text'].forEach(name=>{
+        const c=document.getElementById(colorId(name));
+        const t=document.getElementById(colorId(name)+'Text');
+        c?.addEventListener('input',()=>{t.value=c.value;storeColors[name]=c.value;updateStoreColorPreview();});
+        t?.addEventListener('input',()=>{if(validHex(t.value)){c.value=t.value;storeColors[name]=t.value.toLowerCase();updateStoreColorPreview();}});
+        t?.addEventListener('blur',()=>{setStoreColor(name,t.value);updateStoreColorPreview();});
+      });
+    }
+    function rgbToHex(r,g,b){return '#'+[r,g,b].map(v=>Math.max(0,Math.min(255,Math.round(v))).toString(16).padStart(2,'0')).join('');}
+    function hexRgb(h){h=h.replace('#','');return [parseInt(h.slice(0,2),16),parseInt(h.slice(2,4),16),parseInt(h.slice(4,6),16)];}
+    function colorDistance(a,b){const x=hexRgb(a),y=hexRgb(b);return Math.hypot(x[0]-y[0],x[1]-y[1],x[2]-y[2]);}
+
+    function extractLogoColors(src){
+      return new Promise((resolve,reject)=>{
+        const img=new Image();
+        img.onload=()=>{
+          try{
+            const canvas=document.createElement('canvas'), size=120;
+            canvas.width=size;canvas.height=size;
+            const ctx=canvas.getContext('2d',{willReadFrequently:true});
+            const scale=Math.min(size/img.width,size/img.height);
+            const w=Math.max(1,Math.round(img.width*scale)),h=Math.max(1,Math.round(img.height*scale));
+            ctx.clearRect(0,0,size,size);ctx.drawImage(img,(size-w)/2,(size-h)/2,w,h);
+            const d=ctx.getImageData(0,0,size,size).data, counts=new Map();
+            for(let i=0;i<d.length;i+=16){
+              if(d[i+3]<100)continue;
+              let r=d[i],g=d[i+1],b=d[i+2],mx=Math.max(r,g,b),mn=Math.min(r,g,b);
+              if(mx>238 && mx-mn<20)continue;
+              r=Math.round(r/24)*24;g=Math.round(g/24)*24;b=Math.round(b/24)*24;
+              const k=r+','+g+','+b;counts.set(k,(counts.get(k)||0)+1);
+            }
+            const raw=[...counts.entries()].sort((a,b)=>b[1]-a[1]).map(x=>{const [r,g,b]=x[0].split(',').map(Number);return rgbToHex(r,g,b);});
+            const picked=[];
+            for(const c of raw){if(picked.every(x=>colorDistance(x,c)>55))picked.push(c);if(picked.length>=6)break;}
+            resolve(picked.length?picked:['#6d5dfc','#5848e8']);
+          }catch(e){reject(e);}
+        };
+        img.onerror=()=>reject(new Error('تعذر قراءة صورة اللوجو'));
+        img.src=src;
+      });
+    }
+    function renderDetectedColors(){
+      const box=document.getElementById('detectedColors');if(!box)return;
+      box.innerHTML=detectedLogoColors.map(c=>`<button type="button" class="color-swatch" style="background:${c}" onclick="applyDetectedColor('${c}')"><span>${c}</span></button>`).join('') || '<span class="color-note">لا توجد ألوان مكتشفة.</span>';
+    }
+    function applyDetectedColor(c){setStoreColor('primary',c);updateStoreColorPreview();}
+    function useDetectedColors(){
+      if(!detectedLogoColors.length){alert('ارفع أو احفظ لوجو أولاً');return;}
+      setStoreColor('primary',detectedLogoColors[0]);
+      setStoreColor('button',detectedLogoColors[1]||detectedLogoColors[0]);
+      const light=detectedLogoColors.find(c=>{const [r,g,b]=hexRgb(c);return (r+g+b)/3>185;});
+      const dark=detectedLogoColors.find(c=>{const [r,g,b]=hexRgb(c);return (r+g+b)/3<105;});
+      setStoreColor('background',light||'#f4f7fb');
+      setStoreColor('text',dark||'#172033');
+      updateStoreColorPreview();
+    }
+    function resetStoreColors(){Object.entries(DEFAULT_STORE_COLORS).forEach(([k,v])=>setStoreColor(k,v));updateStoreColorPreview();}
+    async function loadStoreColors(brand){
+      const colors=brand?.storeColors||brand?.colors||{};
+      Object.keys(DEFAULT_STORE_COLORS).forEach(k=>setStoreColor(k,colors[k]||DEFAULT_STORE_COLORS[k]));
+      const logo=brand?.logo||'', img=document.getElementById('colorsLogoPreview'), status=document.getElementById('colorsLogoStatus');
+      if(img){img.src=logo;img.style.display=logo?'block':'none';}
+      if(!logo){detectedLogoColors=[];renderDetectedColors();if(status)status.textContent='لم يتم تحميل لوجو حتى الآن';updateStoreColorPreview();return;}
+      if(status)status.textContent='جاري استخراج ألوان اللوجو...';
+      try{detectedLogoColors=await extractLogoColors(logo);renderDetectedColors();if(status)status.textContent='تم اكتشاف '+detectedLogoColors.length+' ألوان رئيسية';}
+      catch(e){console.error(e);detectedLogoColors=[];renderDetectedColors();if(status)status.textContent='تعذر استخراج ألوان هذا اللوجو';}
+      updateStoreColorPreview();
+    }
+    async function saveStoreColors(){
+      try{
+        updateStoreColorPreview();
+        const res=await apiFetch(`${API_BASE}/admin/brand`),current=await res.json();
+        if(!current)throw new Error('تعذر قراءة بيانات البراند');
+        const saveRes=await apiFetch(`${API_BASE}/admin/brand`,{method:'POST',headers:authHeaders(true),body:JSON.stringify({...current,storeColors:{...storeColors}})});
+        if(!saveRes.ok){const d=await saveRes.json().catch(()=>({}));throw new Error(d.error||'فشل حفظ الألوان');}
+        alert('✅ تم حفظ ألوان المتجر');
+      }catch(e){alert('❌ '+e.message);}
     }
 
     // ===== Product Groups Management =====
@@ -939,19 +1124,22 @@ https://example.com/image-2.jpg"></textarea></div>
     // ===== Users =====
     async function loadUsers() {
       try {
-        // لا يوجد مسار لجلب كل المستخدمين في الخادم حالياً، سنضيفه بسرعة
-        // سنضيف مساراً في server.js: GET /api/admin/users
-        // لكننا سنكتب هنا طلباً مباشراً للقراءة من ملف users.json (غير آمن للمنتج لكن للمختبر)
-        const res = await fetch('/data/users.json');
+        const res = await apiFetch(`${API_BASE}/admin/users`);
         const users = await res.json();
+        const list = Array.isArray(users) ? users : [];
         let html = '';
-        users.forEach(u => {
-          html += `<div class="card"><h3>${u.name}</h3><p><strong>📧 البريد:</strong> ${u.email}</p><p><strong>📞 الهاتف:</strong> ${u.phone}</p><p><strong>📍 العنوان:</strong> ${u.address}</p><p><strong>📅 تاريخ التسجيل:</strong> ${new Date(u.createdAt).toLocaleDateString('ar-EG')}</p></div>`;
+        list.forEach(u => {
+          html += `<div class="card">
+            <h3>${escapeHtml(u.name || '')}</h3>
+            <p><strong>📧 البريد:</strong> ${escapeHtml(u.email || '')}</p>
+            <p><strong>📞 الهاتف:</strong> ${escapeHtml(u.phone || '')}</p>
+            <p><strong>📍 العنوان:</strong> ${escapeHtml(u.address || '')}</p>
+            <p><strong>📅 التسجيل:</strong> ${u.createdAt ? new Date(u.createdAt).toLocaleDateString('ar-EG') : ''}</p>
+          </div>`;
         });
-        document.getElementById('usersList').innerHTML = html || '<p style="text-align:center;color:var(--text-secondary);" data-i18n="no_users">لا يوجد مستخدمون مسجلون</p>';
-        applyTranslations();
+        document.getElementById('usersList').innerHTML = html || '<p style="text-align:center;">لا يوجد مستخدمون مسجلون</p>';
       } catch (err) {
-        document.getElementById('usersList').innerHTML = '<p style="text-align:center;color:var(--text-secondary);">تعذر تحميل المستخدمين</p>';
+        document.getElementById('usersList').innerHTML = '<p style="text-align:center;">تعذر تحميل المستخدمين</p>';
       }
     }
 
@@ -976,12 +1164,14 @@ https://example.com/image-2.jpg"></textarea></div>
     }
 
     // ===== Init =====
+    bindColorInputs();
+    updateStoreColorPreview();
+
     async function initAdminData() {
       await Promise.all([
         loadBrand(),
         loadStats(),
         loadProducts(),
-        loadProductGroups(),
         renderProductGroupsManagement()
       ]);
     }
