@@ -885,6 +885,13 @@ renderFooter();
       if (brandInfo.instagram) links += `<a href="https://instagram.com/${brandInfo.instagram}" class="social-link" target="_blank">📸 إنستا</a>`;
       if (brandInfo.tiktok) links += `<a href="https://tiktok.com/${brandInfo.tiktok}" class="social-link" target="_blank">🎵 تيك توك</a>`;
       if (brandInfo.facebook) links += `<a href="https://facebook.com/${brandInfo.facebook}" class="social-link" target="_blank">📘 فيسبوك</a>`;
+      if (brandInfo.telegram) {
+        const telegramValue = String(brandInfo.telegram).trim();
+        const telegramUrl = telegramValue.startsWith('http://') || telegramValue.startsWith('https://')
+          ? telegramValue
+          : `https://t.me/${telegramValue.replace(/^@/, '')}`;
+        links += `<a href="${escapeHtml(telegramUrl)}" class="social-link" target="_blank" rel="noopener noreferrer">✈️ تيليجرام</a>`;
+      }
       if (brandInfo.phone) links += `<a href="tel:${brandInfo.phone}" class="social-link">📞 هاتف</a>`;
       if (brandInfo.email) links += `<a href="mailto:${brandInfo.email}" class="social-link">📧 بريد</a>`;
       document.getElementById('footerContent').innerHTML = `<h3>${brandInfo.name}</h3><p>${brandInfo.accountName || 'متجر أون لاين'}</p><div class="social-links">${links}</div>`;

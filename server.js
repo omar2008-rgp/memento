@@ -1,3 +1,5 @@
+require('dotenv').config();
+
 const express = require('express');
 const cors = require('cors');
 const path = require('path');
@@ -786,45 +788,6 @@ function requireUser(req, res, next) {
 }
 
 
-function requireUser(req, res, next) {
-  try {
-    const auth = req.headers.authorization || "";
-    const token = auth.startsWith("Bearer ") ? auth.slice(7).trim() : "";
-
-    if (!token) {
-      return res.status(401).json({
-        success: false,
-        error: "Authentication required"
-      });
-    }
-
-    const decoded = jwt.verify(token, JWT_SECRET);
-
-    if (!decoded.userId || !decoded.tenantId) {
-      return res.status(401).json({
-        success: false,
-        error: "Invalid authentication token"
-      });
-    }
-
-    if (decoded.tenantId !== req.tenantId) {
-      return res.status(403).json({
-        success: false,
-        error: "Invalid tenant"
-      });
-    }
-
-    req.userId = decoded.userId;
-    req.userEmail = decoded.email || "";
-
-    next();
-  } catch (error) {
-    return res.status(401).json({
-      success: false,
-      error: "Invalid or expired token"
-    });
-  }
-}
 
 function requireAdmin(
   req,
@@ -2293,6 +2256,79 @@ app.put(
 );
 
 // ============================================================
+// ============================================================
+// ADMIN - UPDATE PRODUCT (PUT)
+// ============================================================
+
+app.put(
+  '/api/admin/products/:id',
+  tenantMiddleware,
+  requireAdmin,
+  async (req, res) => {
+    try {
+      const productId =
+        String(req.params.id || '').trim();
+
+      if (!productId) {
+        return res.status(400).json({
+          error: 'Product ID is required'
+        });
+      }
+
+      const existing = await dbQuery(
+        `
+          SELECT id
+          FROM products
+          WHERE id = $1
+            AND tenant_id = $2
+          LIMIT 1
+        `,
+        [productId, req.tenantId]
+      );
+
+      if (existing.rows.length === 0) {
+        return res.status(404).json({
+          error: 'Product not found'
+        });
+      }
+
+      const product = {
+        ...req.body,
+        id: productId,
+        price: Number(req.body.price) || 0,
+        quantity: Math.max(
+          0,
+          Number.parseInt(req.body.quantity, 10) || 0
+        ),
+        images: Array.isArray(req.body.images)
+          ? req.body.images.filter(Boolean)
+          : []
+      };
+
+      if (!product.name || product.images.length === 0) {
+        return res.status(400).json({
+          error: 'اسم المنتج والصورة مطلوبان'
+        });
+      }
+
+      await dbQuery(
+        `
+          UPDATE products
+          SET data = $1
+          WHERE id = $2
+            AND tenant_id = $3
+        `,
+        [product, productId, req.tenantId]
+      );
+
+      res.json({ success: true, product });
+    } catch (error) {
+      console.error('Update product error:', error);
+      res.status(500).json({ error: 'Database error' });
+    }
+  }
+);
+
 // ADMIN - DELETE PRODUCT
 // ============================================================
 

@@ -48,6 +48,9 @@ button{border:0;border-radius:12px;padding:11px 17px;background:linear-gradient(
 .color-preview-card{width:min(420px,100%);padding:18px;border-radius:16px;background:#fff;box-shadow:0 8px 24px rgba(0,0,0,.12)}
 @media(max-width:680px){.color-controls{grid-template-columns:1fr}.color-swatch{width:70px;height:70px}}
 
+
+/* ===== Payment Settings ===== */
+
 </style>
 </head>
 <body>
@@ -124,6 +127,13 @@ button{border:0;border-radius:12px;padding:11px 17px;background:linear-gradient(
           <div class="form-group"><label data-i18n="facebook">معرّف الفيسبوك</label><input type="text" id="brandFacebook"></div>
           <div class="form-group"><label data-i18n="instagram">معرّف الإنستاجرام</label><input type="text" id="brandInstagram"></div>
           <div class="form-group"><label data-i18n="tiktok">معرّف التيك توك</label><input type="text" id="brandTiktok"></div>
+          <div class="form-group">
+            <label>رابط قناة تيليجرام</label>
+            <input type="text" id="brandTelegram" placeholder="https://t.me/اسم_القناة أو @اسم_القناة">
+            <p style="color:var(--muted);font-size:11px;margin-top:6px;">
+              تقدر تكتب رابط القناة مباشرة أو اسم المستخدم مثل @stikirati.
+            </p>
+          </div>
         </div>
       </div>
 <div class="form-section" style="margin-top:18px;">
@@ -511,6 +521,7 @@ https://example.com/image-2.jpg"></textarea></div>
         document.getElementById('brandFacebook').value = brand.facebook || '';
         document.getElementById('brandInstagram').value = brand.instagram || '';
         document.getElementById('brandTiktok').value = brand.tiktok || '';
+        document.getElementById('brandTelegram').value = brand.telegram || '';
         document.getElementById('brandLogo').value = brand.logo || '';
         fillDeliveryFees(brand.deliveryFees, Number(brand.deliveryFee) || 0);
         await loadStoreColors(brand);
@@ -534,7 +545,8 @@ https://example.com/image-2.jpg"></textarea></div>
           whatsapp: document.getElementById('brandWhatsapp').value.trim(),
           facebook: document.getElementById('brandFacebook').value.trim(),
           instagram: document.getElementById('brandInstagram').value.trim(),
-          tiktok: document.getElementById('brandTiktok').value.trim()
+          tiktok: document.getElementById('brandTiktok').value.trim(),
+          telegram: document.getElementById('brandTelegram').value.trim()
         };
         if (!brand.name || !brand.phone) throw new Error('اسم البراند ورقم الهاتف مطلوبان');
         const res = await apiFetch(`${API_BASE}/admin/brand`, {method:'POST', headers:authHeaders(true), body:JSON.stringify(brand)});
@@ -558,7 +570,6 @@ https://example.com/image-2.jpg"></textarea></div>
         alert('✅ تم حفظ أسعار التوصيل لكل المحافظات');
       } catch (err) { alert('❌ ' + err.message); }
     }
-
 
     // ===== Store Colors =====
     const DEFAULT_STORE_COLORS = {

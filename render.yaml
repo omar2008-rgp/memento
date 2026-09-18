@@ -12,3 +12,5 @@ services:
         sync: false
       - key: JWT_SECRET
         sync: false
+      - key: PLATFORM_ADMIN_PASSWORD
+        sync: false
